@@ -1,1514 +1,1017 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+ <!DOCTYPE html>
+<html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Zyechs AirDraw Pro</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<script>
-tailwind.config={theme:{extend:{fontFamily:{display:['Orbitron','sans-serif'],body:['Space Grotesk','sans-serif']}}}}
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-/* ========== CSS VARIABLES & THEME ========== */
-:root {
-    --bg: #06060E;
-    --bg-alt: #0A0A18;
-    --glass: rgba(8, 8, 20, 0.7);
-    --glass-border: rgba(0, 240, 255, 0.1);
-    --neon: #00F0FF;
-    --neon-rgb: 0, 240, 255;
-    --neon-pink: #FF0055;
-    --neon-green: #00FF88;
-    --neon-yellow: #FFE600;
-    --neon-orange: #FF6B00;
-    --neon-purple: #A855F7;
-    --text: #E8E8F0;
-    --text-muted: #5A5A70;
-    --canvas-bg: #08080F;
+:root{
+  --bg:#060b18;--bg2:#0c1426;--glass:rgba(10,20,50,0.65);--glass-border:rgba(0,240,255,0.15);
+  --cyan:#00f0ff;--pink:#ff006e;--green:#00ff88;--yellow:#ffbe0b;--purple:#8338ec;--orange:#ff5400;
+  --text:#d0daf0;--muted:#4a5a78;--radius:14px;
 }
-[data-theme="light"] {
-    --bg: #EAEAF0;
-    --bg-alt: #DDDDF0;
-    --glass: rgba(255,255,255,0.65);
-    --glass-border: rgba(0,140,160,0.18);
-    --neon: #0099AA;
-    --neon-rgb: 0,153,170;
-    --neon-pink: #CC0044;
-    --neon-green: #00AA55;
-    --neon-yellow: #BBA000;
-    --neon-orange: #DD5500;
-    --neon-purple: #8833CC;
-    --text: #1A1A2E;
-    --text-muted: #7A7A90;
-    --canvas-bg: #08080F;
-}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--text);overflow:hidden;width:100vw;height:100vh;cursor:none}
+canvas{position:absolute;top:0;left:0}
+#drawCanvas{z-index:1}
+#trailCanvas{z-index:2;pointer-events:none}
+#uiCanvas{z-index:3;pointer-events:none}
 
-/* ========== BASE RESET ========== */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; width: 100vw; }
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 2px; }
+/* Splash */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+#splash .logo-ring{width:120px;height:120px;border:3px solid var(--cyan);border-radius:50%;display:flex;align-items:center;justify-content:center;position:relative}
+#splash .logo-ring::before{content:'';position:absolute;inset:-8px;border:2px solid transparent;border-top-color:var(--pink);border-radius:50%;animation:spin 1.5s linear infinite}
+#splash .logo-ring i{font-size:48px;color:var(--cyan)}
+#splash h1{font-family:'Orbitron',sans-serif;font-size:2.4rem;font-weight:900;margin-top:24px;background:linear-gradient(135deg,var(--cyan),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+#splash p{font-size:1.1rem;color:var(--muted);margin-top:8px;letter-spacing:2px}
+#splash .loader-bar{width:200px;height:3px;background:rgba(255,255,255,0.05);border-radius:3px;margin-top:32px;overflow:hidden}
+#splash .loader-bar div{width:0%;height:100%;background:linear-gradient(90deg,var(--cyan),var(--pink));border-radius:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
 
-/* ========== SPLASH SCREEN ========== */
-#splash {
-    position: fixed; inset: 0; z-index: 9999;
-    background: #050510;
-    display: flex; align-items: center; justify-content: center;
-    flex-direction: column;
-}
-#splash .logo-main {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(2.5rem, 8vw, 5rem);
-    font-weight: 900;
-    letter-spacing: 0.15em;
-    color: #fff;
-    display: flex; gap: 2px;
-}
-#splash .logo-main .letter {
-    display: inline-block;
-    text-shadow: 0 0 30px rgba(var(--neon-rgb), 0.6), 0 0 60px rgba(var(--neon-rgb), 0.3);
-}
-#splash .logo-sub {
-    font-family: 'Orbitron', sans-serif;
-    font-size: clamp(0.9rem, 2.5vw, 1.3rem);
-    font-weight: 500;
-    letter-spacing: 0.5em;
-    color: var(--neon);
-    margin-top: 4px;
-    display: flex; gap: 1px;
-    opacity: 0.8;
-}
-#splash .tagline {
-    font-size: clamp(0.8rem, 2vw, 1rem);
-    color: var(--text-muted);
-    margin-top: 24px;
-    font-weight: 300;
-}
-#splash .loader-wrap {
-    margin-top: 40px; width: min(300px, 70vw);
-    height: 3px; background: rgba(255,255,255,0.08);
-    border-radius: 2px; overflow: hidden;
-}
-#splash .loader-fill {
-    height: 100%; width: 0%;
-    background: linear-gradient(90deg, var(--neon), var(--neon-green));
-    border-radius: 2px;
-    box-shadow: 0 0 12px rgba(var(--neon-rgb), 0.6);
-}
-#splash .loader-text {
-    margin-top: 12px; font-size: 0.75rem;
-    color: var(--text-muted); letter-spacing: 0.1em;
-}
+/* Camera Preview */
+#camWrap{position:fixed;bottom:20px;left:20px;z-index:50;width:220px;height:165px;border-radius:var(--radius);overflow:hidden;border:1.5px solid var(--glass-border);background:var(--glass);backdrop-filter:blur(12px);box-shadow:0 0 30px rgba(0,240,255,0.08)}
+#camPreview{width:100%;height:100%;display:block;transform:scaleX(-1)}
+#camLabel{position:absolute;top:6px;left:8px;font-size:.65rem;color:var(--cyan);font-family:'Orbitron',sans-serif;letter-spacing:1px;opacity:.7}
 
-/* ========== MAIN APP ========== */
-#app {
-    position: fixed; inset: 0;
-    background:
-        radial-gradient(ellipse at 30% 20%, rgba(var(--neon-rgb), 0.025) 0%, transparent 60%),
-        radial-gradient(ellipse at 70% 80%, rgba(255,0,85,0.015) 0%, transparent 60%),
-        linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
-    display: none;
-}
-.grid-bg {
-    position: fixed; inset: 0; pointer-events: none; z-index: 1;
-    background-image:
-        linear-gradient(rgba(var(--neon-rgb), 0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(var(--neon-rgb), 0.03) 1px, transparent 1px);
-    background-size: 60px 60px;
-}
+/* Gesture Indicator */
+#gestureIndicator{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:60;font-family:'Orbitron',sans-serif;font-size:.85rem;letter-spacing:2px;padding:8px 24px;border-radius:40px;background:var(--glass);backdrop-filter:blur(16px);border:1px solid var(--glass-border);color:var(--cyan);opacity:0;transition:opacity .3s;pointer-events:none}
+#gestureIndicator.show{opacity:1}
 
-/* Canvas layers */
-#draw-canvas, #overlay-canvas {
-    position: fixed; top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    z-index: 2;
-}
-#draw-canvas { z-index: 2; }
-#overlay-canvas { z-index: 3; pointer-events: none; }
+/* Control Panel */
+#panel{position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center}
+.panel-btn{width:46px;height:46px;border-radius:12px;border:1px solid var(--glass-border);background:var(--glass);backdrop-filter:blur(16px);color:var(--text);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .25s;position:relative}
+.panel-btn:hover{background:rgba(0,240,255,0.1);border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 20px rgba(0,240,255,0.15)}
+.panel-btn.active{background:rgba(0,240,255,0.15);border-color:var(--cyan);color:var(--cyan)}
+.panel-btn .tip{position:absolute;right:56px;background:var(--bg2);color:var(--text);padding:4px 12px;border-radius:8px;font-size:.72rem;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;font-family:'Rajdhani',sans-serif;border:1px solid var(--glass-border)}
+.panel-btn:hover .tip{opacity:1}
+.panel-divider{width:30px;height:1px;background:var(--glass-border);margin:4px 0}
 
-/* Camera preview */
-#cam-preview {
-    position: fixed; bottom: 20px; right: 20px;
-    width: 180px; height: 135px;
-    border-radius: 12px; overflow: hidden;
-    border: 1px solid var(--glass-border);
-    background: #000; z-index: 50;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-}
-#cam-preview video {
-    width: 100%; height: 100%;
-    object-fit: cover;
-    transform: scaleX(-1);
-}
+/* Color Dots */
+#colorRow{display:flex;flex-direction:column;gap:5px;align-items:center}
+.color-dot{width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .2s}
+.color-dot:hover,.color-dot.active{border-color:#fff;transform:scale(1.2);box-shadow:0 0 10px currentColor}
 
-/* ========== STATUS BAR ========== */
-#status-bar {
-    position: fixed; top: 0; left: 0; right: 0;
-    height: 44px; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 20px;
-    background: var(--glass);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--glass-border);
-    font-size: 0.75rem; letter-spacing: 0.05em;
-}
-#status-bar .brand {
-    font-family: 'Orbitron', sans-serif;
-    font-weight: 700; font-size: 0.7rem;
-    color: var(--neon);
-    text-shadow: 0 0 10px rgba(var(--neon-rgb), 0.4);
-}
-#status-bar .info { display: flex; gap: 16px; align-items: center; color: var(--text-muted); }
-#status-bar .info .val { color: var(--text); font-weight: 600; }
-.rec-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: #FF0033; display: none;
-    animation: recPulse 1s infinite;
-}
-.rec-dot.active { display: inline-block; }
-@keyframes recPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+/* Mode Badge */
+#modeBadge{position:fixed;top:20px;right:20px;z-index:60;font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:1.5px;padding:6px 16px;border-radius:20px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glass-border);color:var(--green)}
 
-/* ========== CONTROL PANEL ========== */
-#ctrl-panel {
-    position: fixed; left: 16px; top: 50%; transform: translateY(-50%);
-    z-index: 100;
-    background: var(--glass);
-    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-    border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    padding: 14px 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-    transition: opacity 0.3s;
-}
-.ctrl-divider {
-    width: 70%; height: 1px;
-    background: var(--glass-border);
-    margin: 4px 0;
-}
-.ctrl-btn {
-    width: 40px; height: 40px;
-    border-radius: 12px; border: none;
-    background: transparent; color: var(--text-muted);
-    font-size: 0.95rem; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.2s;
-    position: relative;
-}
-.ctrl-btn:hover { color: var(--neon); background: rgba(var(--neon-rgb), 0.08); }
-.ctrl-btn.active { color: var(--neon); background: rgba(var(--neon-rgb), 0.12); box-shadow: 0 0 12px rgba(var(--neon-rgb), 0.15); }
-.ctrl-btn .tooltip {
-    position: absolute; left: 54px; top: 50%; transform: translateY(-50%);
-    background: var(--glass); backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    padding: 5px 10px; border-radius: 8px;
-    font-size: 0.7rem; white-space: nowrap;
-    color: var(--text); opacity: 0; pointer-events: none;
-    transition: opacity 0.2s;
-}
-.ctrl-btn:hover .tooltip { opacity: 1; }
+/* Tutorial Overlay */
+#tutorial{position:fixed;inset:0;z-index:200;background:rgba(6,11,24,0.92);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;flex-direction:column}
+#tutorial.show{display:flex}
+#tutorial h2{font-family:'Orbitron',sans-serif;font-size:1.6rem;margin-bottom:32px;background:linear-gradient(135deg,var(--cyan),var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.gesture-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:600px}
+.gesture-card{background:var(--glass);border:1px solid var(--glass-border);border-radius:var(--radius);padding:20px;text-align:center;transition:transform .3s}
+.gesture-card:hover{transform:translateY(-4px);border-color:var(--cyan)}
+.gesture-card .emoji{font-size:2.2rem;margin-bottom:8px}
+.gesture-card .name{font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--cyan);letter-spacing:1px;margin-bottom:4px}
+.gesture-card .desc{font-size:.8rem;color:var(--muted)}
+#closeTutorial{margin-top:32px;padding:10px 32px;border-radius:30px;border:1.5px solid var(--cyan);background:transparent;color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:.8rem;cursor:pointer;letter-spacing:2px;transition:all .25s}
+#closeTutorial:hover{background:var(--cyan);color:var(--bg)}
 
-/* Color swatches */
-.color-swatch {
-    width: 22px; height: 22px; border-radius: 50%;
-    border: 2px solid transparent; cursor: pointer;
-    transition: all 0.2s; flex-shrink: 0;
-}
-.color-swatch:hover { transform: scale(1.15); }
-.color-swatch.active { border-color: #fff; box-shadow: 0 0 8px currentColor; }
-.color-swatch.rainbow {
-    background: conic-gradient(#FF0055, #FFE600, #00FF88, #00F0FF, #A855F7, #FF0055);
-}
+/* Screenshot Preview */
+#screenshotModal{position:fixed;inset:0;z-index:300;background:rgba(6,11,24,0.9);backdrop-filter:blur(20px);display:none;align-items:center;justify-content:center;flex-direction:column}
+#screenshotModal.show{display:flex}
+#screenshotModal img{max-width:70vw;max-height:60vh;border-radius:var(--radius);border:1px solid var(--glass-border);box-shadow:0 0 60px rgba(0,240,255,0.1)}
+#screenshotModal .actions{margin-top:20px;display:flex;gap:12px}
+#screenshotModal button{padding:10px 28px;border-radius:30px;border:1.5px solid var(--glass-border);background:var(--glass);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.9rem;cursor:pointer;transition:all .25s}
+#screenshotModal button:hover{border-color:var(--cyan);color:var(--cyan)}
+#screenshotModal button.primary{background:var(--cyan);color:var(--bg);border-color:var(--cyan)}
+#screenshotModal button.primary:hover{box-shadow:0 0 20px rgba(0,240,255,0.4)}
 
-/* Brush size indicator */
-#brush-size-display {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.55rem; color: var(--neon);
-    text-align: center; width: 100%;
-}
+/* Mobile Warning */
+#mobileWarn{position:fixed;inset:0;z-index:400;background:var(--bg);display:none;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:40px}
+#mobileWarn i{font-size:3rem;color:var(--cyan);margin-bottom:16px;animation:spin 3s linear infinite}
+#mobileWarn h2{font-family:'Orbitron',sans-serif;font-size:1.2rem;color:var(--cyan)}
+#mobileWarn p{color:var(--muted);margin-top:8px;font-size:.9rem}
 
-/* ========== GESTURE INDICATOR ========== */
-#gesture-indicator {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    z-index: 100;
-    background: var(--glass);
-    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-    border: 1px solid var(--glass-border);
-    border-radius: 50px;
-    padding: 8px 24px;
-    font-size: 0.8rem; font-weight: 500;
-    display: flex; align-items: center; gap: 10px;
-    transition: all 0.3s;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-#gesture-indicator .gesture-icon { font-size: 1.1rem; }
-#gesture-indicator .gesture-name { color: var(--neon); font-weight: 700; }
+/* Recording Indicator */
+#recDot{position:fixed;top:20px;left:20px;z-index:60;display:none;align-items:center;gap:8px;font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--pink);letter-spacing:1px}
+#recDot.show{display:flex}
+#recDot .dot{width:10px;height:10px;border-radius:50%;background:var(--pink);animation:pulse 1s infinite}
 
-/* ========== TUTORIAL OVERLAY ========== */
-#tutorial {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(5,5,16,0.92);
-    backdrop-filter: blur(8px);
-    display: none; align-items: center; justify-content: center;
-}
-#tutorial.show { display: flex; }
-.tutorial-card {
-    background: var(--glass);
-    backdrop-filter: blur(24px);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
-    padding: 40px;
-    max-width: 560px; width: 90%;
-    box-shadow: 0 0 60px rgba(var(--neon-rgb), 0.08);
-}
-.tutorial-card h2 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.2rem; font-weight: 700;
-    color: var(--neon); margin-bottom: 24px;
-    text-shadow: 0 0 15px rgba(var(--neon-rgb), 0.3);
-}
-.gesture-row {
-    display: flex; align-items: center; gap: 16px;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(var(--neon-rgb), 0.06);
-}
-.gesture-row:last-child { border-bottom: none; }
-.gesture-emoji { font-size: 1.8rem; width: 44px; text-align: center; flex-shrink: 0; }
-.gesture-info { flex: 1; }
-.gesture-info .name { font-weight: 600; font-size: 0.9rem; }
-.gesture-info .desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
-.tutorial-close {
-    margin-top: 28px; width: 100%;
-    padding: 12px; border-radius: 12px;
-    background: rgba(var(--neon-rgb), 0.12);
-    border: 1px solid rgba(var(--neon-rgb), 0.25);
-    color: var(--neon); font-family: 'Orbitron', sans-serif;
-    font-size: 0.8rem; font-weight: 600;
-    cursor: pointer; letter-spacing: 0.1em;
-    transition: all 0.2s;
-}
-.tutorial-close:hover { background: rgba(var(--neon-rgb), 0.2); }
+/* Brush Size Indicator */
+#brushSize{position:fixed;bottom:20px;right:80px;z-index:60;display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--muted);font-family:'Orbitron',sans-serif}
+#brushSize input{width:80px;accent-color:var(--cyan)}
 
-/* ========== SCREENSHOT MODAL ========== */
-#screenshot-modal {
-    position: fixed; inset: 0; z-index: 200;
-    background: rgba(5,5,16,0.9);
-    backdrop-filter: blur(8px);
-    display: none; align-items: center; justify-content: center;
-    flex-direction: column; gap: 20px;
-}
-#screenshot-modal.show { display: flex; }
-#screenshot-modal img {
-    max-width: 85vw; max-height: 60vh;
-    border-radius: 16px;
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 0 40px rgba(var(--neon-rgb), 0.1);
-}
-.modal-actions { display: flex; gap: 12px; }
-.modal-btn {
-    padding: 10px 28px; border-radius: 12px;
-    font-family: 'Orbitron', sans-serif;
-    font-size: 0.75rem; font-weight: 600;
-    cursor: pointer; letter-spacing: 0.08em;
-    transition: all 0.2s; border: 1px solid;
-}
-.modal-btn.primary {
-    background: rgba(var(--neon-rgb), 0.15);
-    border-color: rgba(var(--neon-rgb), 0.3);
-    color: var(--neon);
-}
-.modal-btn.primary:hover { background: rgba(var(--neon-rgb), 0.25); }
-.modal-btn.secondary {
-    background: transparent;
-    border-color: var(--glass-border);
-    color: var(--text-muted);
-}
-.modal-btn.secondary:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+/* Light Mode */
+body.light{--bg:#eef1f7;--bg2:#dde3ef;--glass:rgba(255,255,255,0.6);--glass-border:rgba(0,180,220,0.2);--text:#1a2240;--muted:#6b7a9a}
+body.light #splash{background:#eef1f7}
 
-/* ========== TOAST ========== */
-#toast-container {
-    position: fixed; top: 56px; right: 20px;
-    z-index: 300; display: flex; flex-direction: column; gap: 8px;
-}
-.toast {
-    background: var(--glass);
-    backdrop-filter: blur(16px);
-    border: 1px solid var(--glass-border);
-    border-radius: 12px;
-    padding: 10px 18px;
-    font-size: 0.78rem; font-weight: 500;
-    display: flex; align-items: center; gap: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
-    transform: translateX(120%);
-}
-.toast .toast-icon { color: var(--neon); }
-
-/* ========== ERROR OVERLAY ========== */
-#error-overlay {
-    position: fixed; inset: 0; z-index: 9998;
-    background: #050510;
-    display: none; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px;
-    color: #FF4466; text-align: center; padding: 40px;
-}
-#error-overlay.show { display: flex; }
-#error-overlay i { font-size: 3rem; }
-#error-overlay .msg { font-size: 1rem; color: #ccc; max-width: 400px; line-height: 1.6; }
-
-/* ========== LANDSCAPE WARNING (MOBILE) ========== */
-#landscape-warn {
-    position: fixed; inset: 0; z-index: 9997;
-    background: #050510;
-    display: none; align-items: center; justify-content: center;
-    flex-direction: column; gap: 16px; color: var(--text-muted);
-    font-size: 0.9rem; text-align: center; padding: 40px;
-}
-#landscape-warn i { font-size: 2.5rem; color: var(--neon); }
-@media (max-width: 768px) and (orientation: portrait) {
-    #landscape-warn { display: flex; }
-}
-@media (max-width: 768px) {
-    #ctrl-panel { left: 8px; padding: 10px 6px; gap: 4px; }
-    .ctrl-btn { width: 34px; height: 34px; font-size: 0.8rem; }
-    .color-swatch { width: 18px; height: 18px; }
-    #cam-preview { width: 120px; height: 90px; bottom: 12px; right: 12px; }
-    #gesture-indicator { bottom: 12px; padding: 6px 16px; font-size: 0.7rem; }
-}
-
-/* ========== REDUCED MOTION ========== */
-@media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
+/* Scrollbar */
+::-webkit-scrollbar{display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 
-<!-- ========== SPLASH SCREEN ========== -->
+<!-- Splash Screen -->
 <div id="splash">
-    <div class="logo-main" id="logo-main"></div>
-    <div class="logo-sub" id="logo-sub"></div>
-    <p class="tagline" id="splash-tagline">Draw in the Air, Like a Wizard 🤏</p>
-    <div class="loader-wrap"><div class="loader-fill" id="loader-fill"></div></div>
-    <p class="loader-text" id="loader-text">Initializing hand tracking engine...</p>
+  <div class="logo-ring"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+  <h1>Zyechs AirDraw Pro</h1>
+  <p>Draw in the Air, Like a Wizard&#x1F90F;</p>
+  <div class="loader-bar"><div id="loadBar"></div></div>
 </div>
 
-<!-- ========== ERROR OVERLAY ========== -->
-<div id="error-overlay">
-    <i class="fas fa-exclamation-triangle"></i>
-    <p class="msg" id="error-msg"></p>
+<!-- Main Canvases -->
+<canvas id="drawCanvas"></canvas>
+<canvas id="trailCanvas"></canvas>
+<canvas id="uiCanvas"></canvas>
+
+<!-- Hidden Video -->
+<video id="camVideo" style="display:none" playsinline></video>
+
+<!-- Camera Preview -->
+<div id="camWrap">
+  <span id="camLabel">LIVE TRACKING</span>
+  <canvas id="camPreview"></canvas>
 </div>
 
-<!-- ========== LANDSCAPE WARNING ========== -->
-<div id="landscape-warn">
-    <i class="fas fa-mobile-screen"></i>
-    <p>Please rotate your device to landscape mode</p>
+<!-- Gesture Indicator -->
+<div id="gestureIndicator"></div>
+
+<!-- Mode Badge -->
+<div id="modeBadge">NORMAL</div>
+
+<!-- Recording Indicator -->
+<div id="recDot"><div class="dot"></div>REC</div>
+
+<!-- Brush Size -->
+<div id="brushSize">
+  <span>BRUSH</span>
+  <input type="range" id="brushRange" min="1" max="20" value="4">
 </div>
 
-<!-- ========== MAIN APP ========== -->
-<div id="app">
-    <div class="grid-bg"></div>
+<!-- Control Panel -->
+<div id="panel">
+  <button class="panel-btn" id="btnDraw" title="Draw"><i class="fa-solid fa-pen"></i><span class="tip">Draw Mode</span></button>
+  <button class="panel-btn" id="btnSymmetry" title="Symmetry"><i class="fa-solid fa-left-right"></i><span class="tip">Symmetry</span></button>
+  <button class="panel-btn" id="btnTrail" title="Trail"><i class="fa-solid fa-meteor"></i><span class="tip">Trail FX</span></button>
+  <div class="panel-divider"></div>
+  <button class="panel-btn" id="btnGlow" title="Glow"><i class="fa-solid fa-sun"></i><span class="tip">Neon Glow</span></button>
+  <button class="panel-btn" id="btnRainbow" title="Rainbow"><i class="fa-solid fa-rainbow"></i><span class="tip">Rainbow</span></button>
+  <div class="panel-divider"></div>
+  <div id="colorRow"></div>
+  <div class="panel-divider"></div>
+  <button class="panel-btn" id="btnClear" title="Clear"><i class="fa-solid fa-trash"></i><span class="tip">Clear</span></button>
+  <button class="panel-btn" id="btnSave" title="Save"><i class="fa-solid fa-camera"></i><span class="tip">Save PNG</span></button>
+  <button class="panel-btn" id="btnRecord" title="Record"><i class="fa-solid fa-circle" style="color:var(--pink)"></i><span class="tip">Record</span></button>
+  <div class="panel-divider"></div>
+  <button class="panel-btn" id="btnTutorial" title="Tutorial"><i class="fa-solid fa-question"></i><span class="tip">Gestures</span></button>
+  <button class="panel-btn" id="btnTheme" title="Theme"><i class="fa-solid fa-moon"></i><span class="tip">Theme</span></button>
+  <button class="panel-btn" id="btnFullscreen" title="Fullscreen"><i class="fa-solid fa-expand"></i><span class="tip">Fullscreen</span></button>
+</div>
 
-    <!-- Hidden video for MediaPipe -->
-    <video id="cam-video" playsinline style="display:none"></video>
+<!-- Tutorial Overlay -->
+<div id="tutorial">
+  <h2>Gesture Guide</h2>
+  <div class="gesture-grid">
+    <div class="gesture-card"><div class="emoji">&#x261D;</div><div class="name">INDEX UP</div><div class="desc">Draw on canvas</div></div>
+    <div class="gesture-card"><div class="emoji">&#x270B;</div><div class="name">OPEN HAND</div><div class="desc">Clear canvas</div></div>
+    <div class="gesture-card"><div class="emoji">&#x1F90F;</div><div class="name">PINCH</div><div class="desc">Drag canvas</div></div>
+    <div class="gesture-card"><div class="emoji">&#x270A;</div><div class="name">FIST</div><div class="desc">Pause drawing</div></div>
+    <div class="gesture-card"><div class="emoji">&#x270C;</div><div class="name">PEACE</div><div class="desc">Cycle color</div></div>
+    <div class="gesture-card"><div class="emoji">&#x1F596;</div><div class="name">NO HAND</div><div class="desc">Idle mode</div></div>
+  </div>
+  <button id="closeTutorial">GOT IT</button>
+</div>
 
-    <!-- Drawing canvas (persistent) -->
-    <canvas id="draw-canvas"></canvas>
-    <!-- Overlay canvas (cleared each frame) -->
-    <canvas id="overlay-canvas"></canvas>
+<!-- Screenshot Modal -->
+<div id="screenshotModal">
+  <img id="previewImg" src="" alt="preview">
+  <div class="actions">
+    <button id="btnCancelShot">Cancel</button>
+    <button class="primary" id="btnDownloadShot">Download PNG</button>
+  </div>
+</div>
 
-    <!-- Camera preview -->
-    <div id="cam-preview">
-        <video id="preview-video" playsinline muted></video>
-    </div>
-
-    <!-- Status bar -->
-    <header id="status-bar">
-        <div class="brand">ZYECHS AIRDRAW PRO</div>
-        <div class="info">
-            <span><span class="val" id="fps-display">0</span> FPS</span>
-            <span>Gesture: <span class="val" id="gesture-display">--</span></span>
-            <span class="rec-dot" id="rec-dot"></span>
-            <span id="rec-label" style="color:#FF0033;display:none">REC</span>
-        </div>
-    </header>
-
-    <!-- Control panel -->
-    <nav id="ctrl-panel" aria-label="Drawing controls">
-        <!-- Brush size -->
-        <button class="ctrl-btn" id="btn-size-down" aria-label="Decrease brush size"><i class="fas fa-minus"></i><span class="tooltip">Smaller brush</span></button>
-        <div id="brush-size-display">4px</div>
-        <button class="ctrl-btn" id="btn-size-up" aria-label="Increase brush size"><i class="fas fa-plus"></i><span class="tooltip">Bigger brush</span></button>
-        <div class="ctrl-divider"></div>
-        <!-- Colors -->
-        <div class="color-swatch active" data-color="#00F0FF" style="background:#00F0FF;color:#00F0FF" title="Cyan"></div>
-        <div class="color-swatch" data-color="#FF0055" style="background:#FF0055;color:#FF0055" title="Pink"></div>
-        <div class="color-swatch" data-color="#00FF88" style="background:#00FF88;color:#00FF88" title="Green"></div>
-        <div class="color-swatch" data-color="#FFE600" style="background:#FFE600;color:#FFE600" title="Yellow"></div>
-        <div class="color-swatch" data-color="#FF6B00" style="background:#FF6B00;color:#FF6B00" title="Orange"></div>
-        <div class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF;color:#FFFFFF" title="White"></div>
-        <div class="color-swatch rainbow" data-color="rainbow" title="Rainbow"></div>
-        <div class="ctrl-divider"></div>
-        <!-- Modes -->
-        <button class="ctrl-btn" id="btn-symmetry" aria-label="Symmetry mode"><i class="fas fa-arrows-left-right"></i><span class="tooltip">Symmetry</span></button>
-        <button class="ctrl-btn" id="btn-trail" aria-label="Trail effect"><i class="fas fa-wind"></i><span class="tooltip">Trail</span></button>
-        <div class="ctrl-divider"></div>
-        <!-- Actions -->
-        <button class="ctrl-btn" id="btn-save" aria-label="Save image"><i class="fas fa-camera"></i><span class="tooltip">Save PNG (S)</span></button>
-        <button class="ctrl-btn" id="btn-record" aria-label="Record video"><i class="fas fa-video"></i><span class="tooltip">Record (R)</span></button>
-        <button class="ctrl-btn" id="btn-clear" aria-label="Clear canvas"><i class="fas fa-trash-can"></i><span class="tooltip">Clear (C)</span></button>
-        <div class="ctrl-divider"></div>
-        <button class="ctrl-btn" id="btn-sound" aria-label="Toggle sound"><i class="fas fa-volume-high"></i><span class="tooltip">Sound</span></button>
-        <button class="ctrl-btn" id="btn-theme" aria-label="Toggle theme"><i class="fas fa-moon"></i><span class="tooltip">Theme</span></button>
-        <button class="ctrl-btn" id="btn-tutorial" aria-label="Gesture tutorial"><i class="fas fa-question"></i><span class="tooltip">Tutorial</span></button>
-    </nav>
-
-    <!-- Gesture indicator -->
-    <div id="gesture-indicator">
-        <span class="gesture-icon" id="gest-icon">✋</span>
-        <span>Detected:</span>
-        <span class="gesture-name" id="gest-name">Waiting...</span>
-    </div>
-
-    <!-- Tutorial overlay -->
-    <div id="tutorial" role="dialog" aria-label="Gesture tutorial">
-        <div class="tutorial-card">
-            <h2>GESTURE GUIDE</h2>
-            <div class="gesture-row"><span class="gesture-emoji">☝️</span><div class="gesture-info"><div class="name">Draw</div><div class="desc">Raise index finger only to draw with neon laser</div></div></div>
-            <div class="gesture-row"><span class="gesture-emoji">✋</span><div class="gesture-info"><div class="name">Clear Canvas</div><div class="desc">Open palm to wipe everything clean</div></div></div>
-            <div class="gesture-row"><span class="gesture-emoji">🤏</span><div class="gesture-info"><div class="name">Drag Canvas</div><div class="desc">Pinch and move to pan the drawing</div></div></div>
-            <div class="gesture-row"><span class="gesture-emoji">✊</span><div class="gesture-info"><div class="name">Pause / Resume</div><div class="desc">Fist toggles drawing pause state</div></div></div>
-            <div class="gesture-row"><span class="gesture-emoji">✌️</span><div class="gesture-info"><div class="name">Cycle Color</div><div class="desc">Peace sign switches to next brush color</div></div></div>
-            <button class="tutorial-close" id="tutorial-close">GOT IT</button>
-        </div>
-    </div>
-
-    <!-- Screenshot modal -->
-    <div id="screenshot-modal" role="dialog" aria-label="Screenshot preview">
-        <img id="screenshot-img" src="" alt="Screenshot preview">
-        <div class="modal-actions">
-            <button class="modal-btn primary" id="btn-download">DOWNLOAD PNG</button>
-            <button class="modal-btn secondary" id="btn-cancel-save">CANCEL</button>
-        </div>
-    </div>
-
-    <!-- Toast container -->
-    <div id="toast-container" aria-live="polite"></div>
+<!-- Mobile Portrait Warning -->
+<div id="mobileWarn">
+  <i class="fa-solid fa-mobile-screen-button"></i>
+  <h2>ROTATE YOUR DEVICE</h2>
+  <p>Please use landscape mode for the best experience</p>
 </div>
 
 <script>
-/* ================================================================
-   ZYECHS AIRDRAW PRO — Main Application Script
-   Hand-tracking drawing with neon glow, multi-gesture, symmetry,
-   trail effects, recording, and futuristic UI.
-   ================================================================ */
+/* =====================================================
+   ZYECHS AIRDRAW PRO
+   "Draw in the Air, Like a Wizard🤏"
+   ===================================================== */
 
-// ==================== KONFIGURASI ====================
-const CONFIG = {
-    smoothFactor: 0.45,        // Exponential moving average (lower = smoother)
-    interpolateSpacing: 4,      // Min pixels between interpolated points
-    pinchThreshold: 0.065,      // Normalized distance for pinch detection
-    brushMin: 2, brushMax: 24,
-    brushDefault: 4,
-    trailFadeAlpha: 0.012,      // Canvas fade per trail tick
-    trailInterval: 50,          // ms between trail fade ticks
-    gestureDebounce: {
-        clear: 1800,
-        pause: 900,
-        color: 600
-    },
-    neonLayers: [
-        { widthAdd: 18, blur: 35, alpha: 0.08 },
-        { widthAdd: 8, blur: 18, alpha: 0.22 },
-        { widthAdd: 3, blur: 10, alpha: 0.45, white: true },
-        { widthAdd: 0, blur: 5, alpha: 1.0 }
-    ],
-    colors: ['#00F0FF','#FF0055','#00FF88','#FFE600','#FF6B00','#FFFFFF','rainbow']
+// ─── CONFIG ──────────────────────────────────────────
+const CFG = {
+  smoothing: 0.32,
+  minDist: 1.5,
+  colors: ['#00f0ff','#ff006e','#00ff88','#ffbe0b','#8338ec','#ff5400','#f0f0f0'],
+  gestureHoldMs: 600,
+  camW: 640,
+  camH: 480,
 };
 
-// ==================== STATE ====================
-let brushSize = CONFIG.brushDefault;
-let currentColorIndex = 0;
-let rainbowHue = 0;
-let symmetryMode = false;
-let trailMode = false;
-let isPaused = false;
-let soundEnabled = true;
-let isRecording = false;
-let isDarkTheme = true;
+// ─── APP STATE ───────────────────────────────────────
+const S = {
+  gesture: 'none',
+  prevGesture: 'none',
+  drawing: false,
+  paused: false,
+  color: CFG.colors[0],
+  colorIdx: 0,
+  brushSize: 4,
+  glow: true,
+  rainbow: false,
+  mode: 'normal', // normal | symmetry | trail
+  hue: 0,
+  offset: { x: 0, y: 0 },
+  dragStart: null,
+  dragOffsetStart: null,
+  smoothPos: null,
+  currentStroke: [],
+  lastDrawPos: null,
+  recording: false,
+  recorder: null,
+  chunks: [],
+  darkMode: true,
+  handPresent: false,
+  fingerPos: null,   // posisi jari di canvas utama (sudah di-mirror)
+  rawFingerPos: null, // posisi jari mentah dari MediaPipe
+  gestureTimer: 0,
+  gestureConfirmed: '',
+  cameraReady: false,
+};
 
-// Drawing state
-let prevDrawPoint = null;
-let smoothedPoint = null;
-let isDragging = false;
-let dragStart = null;
-
-// Gesture debounce timers
-let lastClearTime = 0;
-let lastPauseTime = 0;
-let lastColorTime = 0;
-
-// Partikel system
-let particles = [];
-
-// FPS counter
-let frameCount = 0;
-let lastFpsTime = performance.now();
-let currentFps = 0;
-
-// MediaPipe & Camera
-let handsInstance = null;
-let cameraInstance = null;
-let mediaRecorder = null;
-let recordedChunks = [];
-
-// Trail interval
-let trailIntervalId = null;
-
-// Audio context (dibuat saat user interaction pertama)
-let audioCtx = null;
-
-// ==================== DOM REFERENCES ====================
-const splashEl = document.getElementById('splash');
-const loaderFill = document.getElementById('loader-fill');
-const loaderText = document.getElementById('loader-text');
-const appEl = document.getElementById('app');
-const errorOverlay = document.getElementById('error-overlay');
-const errorMsg = document.getElementById('error-msg');
-const camVideo = document.getElementById('cam-video');
-const previewVideo = document.getElementById('preview-video');
-const drawCanvas = document.getElementById('draw-canvas');
-const overlayCanvas = document.getElementById('overlay-canvas');
+// ─── CANVAS SETUP ────────────────────────────────────
+const drawCanvas = document.getElementById('drawCanvas');
 const drawCtx = drawCanvas.getContext('2d');
-const overlayCtx = overlayCanvas.getContext('2d');
-const fpsDisplay = document.getElementById('fps-display');
-const gestureDisplay = document.getElementById('gesture-display');
-const gestIcon = document.getElementById('gest-icon');
-const gestName = document.getElementById('gest-name');
-const brushSizeDisplay = document.getElementById('brush-size-display');
-const recDot = document.getElementById('rec-dot');
-const recLabel = document.getElementById('rec-label');
-const tutorialEl = document.getElementById('tutorial');
-const screenshotModal = document.getElementById('screenshot-modal');
-const screenshotImg = document.getElementById('screenshot-img');
-const toastContainer = document.getElementById('toast-container');
+const trailCanvas = document.getElementById('trailCanvas');
+const trailCtx = trailCanvas.getContext('2d');
+const uiCanvas = document.getElementById('uiCanvas');
+const uiCtx = uiCanvas.getContext('2d');
+const camPreview = document.getElementById('camPreview');
+const camCtx = camPreview.getContext('2d');
+const camVideo = document.getElementById('camVideo');
 
-// ==================== AUDIO ENGINE ====================
-function ensureAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+// Offscreen canvas untuk menyimpan stroke yang sudah selesai
+let persistCanvas, persistCtx;
+
+function initCanvases() {
+  const w = window.innerWidth, h = window.innerHeight;
+  [drawCanvas, trailCanvas, uiCanvas].forEach(c => { c.width = w; c.height = h; });
+  persistCanvas = document.createElement('canvas');
+  persistCanvas.width = w; persistCanvas.height = h;
+  persistCtx = persistCanvas.getContext('2d');
+  camPreview.width = 220; camPreview.height = 165;
+  clearAllCanvases();
 }
 
-function playSound(type) {
-    if (!soundEnabled || !audioCtx) return;
-    try {
-        const now = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        switch(type) {
-            case 'clear':
-                osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(900, now);
-                osc.frequency.exponentialRampToValueAtTime(180, now + 0.25);
-                gain.gain.setValueAtTime(0.06, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                osc.start(now); osc.stop(now + 0.25);
-                break;
-            case 'color':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(523, now);
-                osc.frequency.setValueAtTime(659, now + 0.07);
-                osc.frequency.setValueAtTime(784, now + 0.14);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-                osc.start(now); osc.stop(now + 0.25);
-                break;
-            case 'pause':
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(180, now);
-                gain.gain.setValueAtTime(0.08, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-                osc.start(now); osc.stop(now + 0.12);
-                break;
-            case 'pinch':
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(1100, now);
-                osc.frequency.exponentialRampToValueAtTime(550, now + 0.08);
-                gain.gain.setValueAtTime(0.04, now);
-                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
-                osc.start(now); osc.stop(now + 0.08);
-                break;
-        }
-    } catch(e) { /* Abaikan error audio */ }
+function clearAllCanvases() {
+  persistCtx.clearRect(0, 0, persistCanvas.width, persistCanvas.height);
+  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
 }
 
-// ==================== TOAST NOTIFICATION ====================
-function showToast(message, icon = 'fa-circle-info') {
-    const toast = document.createElement('div');
-    toast.className = 'toast';
-    toast.innerHTML = `<i class="fas ${icon} toast-icon"></i><span>${message}</span>`;
-    toastContainer.appendChild(toast);
-    gsap.to(toast, { x: 0, duration: 0.4, ease: 'back.out(1.4)' });
-    setTimeout(() => {
-        gsap.to(toast, {
-            x: 140, opacity: 0, duration: 0.3,
-            onComplete: () => toast.remove()
-        });
-    }, 2200);
+function handleResize() {
+  const old = document.createElement('canvas');
+  old.width = persistCanvas.width; old.height = persistCanvas.height;
+  old.getContext('2d').drawImage(persistCanvas, 0, 0);
+  const w = window.innerWidth, h = window.innerHeight;
+  [drawCanvas, trailCanvas, uiCanvas].forEach(c => { c.width = w; c.height = h; });
+  persistCanvas.width = w; persistCanvas.height = h;
+  persistCtx.drawImage(old, 0, 0);
 }
 
-// ==================== ERROR HANDLER ====================
-function showError(msg) {
-    errorMsg.textContent = msg;
-    errorOverlay.classList.add('show');
-    gsap.to('#splash', { opacity: 0, duration: 0.5 });
+window.addEventListener('resize', handleResize);
+
+// ─── SOUND ENGINE ────────────────────────────────────
+class SoundEngine {
+  constructor() { this.ctx = null; }
+  init() {
+    if (this.ctx) return;
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  beep(freq = 440, dur = 0.1, vol = 0.08) {
+    if (!this.ctx) return;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.connect(g); g.connect(this.ctx.destination);
+    o.frequency.value = freq; o.type = 'sine';
+    g.gain.value = vol;
+    o.start();
+    g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+    o.stop(this.ctx.currentTime + dur);
+  }
+  drawStart() { this.beep(523, 0.06); }
+  drawEnd()   { this.beep(392, 0.06); }
+  clear()     { this.beep(261, 0.25, 0.1); }
+  pause()     { this.beep(330, 0.12); }
+  colorChange(){ this.beep(659, 0.08); }
+  pinch()     { this.beep(440, 0.08); }
+}
+const sfx = new SoundEngine();
+
+// ─── SMOOTHING ───────────────────────────────────────
+function smoothPoint(raw) {
+  if (!S.smoothPos) { S.smoothPos = { x: raw.x, y: raw.y }; return { ...S.smoothPos }; }
+  const a = CFG.smoothing;
+  S.smoothPos.x += (raw.x - S.smoothPos.x) * a;
+  S.smoothPos.y += (raw.y - S.smoothPos.y) * a;
+  return { ...S.smoothPos };
 }
 
-// ==================== CANVAS SETUP ====================
-function resizeCanvases() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    // Simpan konten lama
-    let imageData = null;
-    if (drawCanvas.width > 0 && drawCanvas.height > 0) {
-        try { imageData = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height); } catch(e) {}
-    }
-    drawCanvas.width = w;
-    drawCanvas.height = h;
-    overlayCanvas.width = w;
-    overlayCanvas.height = h;
-    // Restore konten
-    if (imageData) {
-        try { drawCtx.putImageData(imageData, 0, 0); } catch(e) {}
-    }
-}
-window.addEventListener('resize', resizeCanvases);
-resizeCanvases();
-
-// ==================== SMOOTHING & INTERPOLATION ====================
 function dist(a, b) {
-    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+  return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
 }
 
-function smoothPoint(raw, prev, factor) {
-    if (!prev) return { x: raw.x, y: raw.y };
-    return {
-        x: prev.x * factor + raw.x * (1 - factor),
-        y: prev.y * factor + raw.y * (1 - factor)
-    };
+// ─── GESTURE DETECTION ──────────────────────────────
+const HAND_CONNS = [
+  [0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],
+  [5,9],[9,10],[10,11],[11,12],[9,13],[13,14],[14,15],[15,16],
+  [13,17],[0,17],[17,18],[18,19],[19,20]
+];
+
+function detectGesture(lm) {
+  // Cek apakah jari terangkat (y lebih kecil = lebih atas di canvas)
+  const idxUp = lm[8].y < lm[6].y;
+  const midUp = lm[12].y < lm[10].y;
+  const ringUp = lm[16].y < lm[14].y;
+  const pinkUp = lm[20].y < lm[18].y;
+  // Thumb: bandingkan posisi x relatif terhadap knuckle
+  const thumbOut = Math.abs(lm[4].x - lm[3].x) > 0.04;
+
+  // Pinch: jarak ujung jempol dan telunjuk
+  const pinchD = dist(lm[4], lm[8]);
+
+  if (pinchD < 0.06 && !idxUp && !midUp) return 'pinch';
+  if (idxUp && !midUp && !ringUp && !pinkUp) return 'draw';
+  if (idxUp && midUp && !ringUp && !pinkUp) return 'color';
+  if (idxUp && midUp && ringUp && pinkUp) return 'clear';
+  if (!idxUp && !midUp && !ringUp && !pinkUp) return 'pause';
+  return 'none';
 }
 
-function interpolatePoints(p1, p2, spacing) {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    const d = Math.sqrt(dx * dx + dy * dy);
-    if (d < spacing) return [p2];
-    const points = [];
-    const steps = Math.ceil(d / spacing);
-    for (let i = 1; i <= steps; i++) {
-        const t = i / steps;
-        points.push({ x: p1.x + dx * t, y: p1.y + dy * t });
-    }
-    return points;
+// ─── DRAWING ENGINE ──────────────────────────────────
+function getColor() {
+  if (S.rainbow) {
+    S.hue = (S.hue + 1.5) % 360;
+    return `hsl(${S.hue}, 100%, 60%)`;
+  }
+  return S.color;
 }
 
-// ==================== NEON DRAWING ENGINE ====================
-function getCurrentColor() {
-    const c = CONFIG.colors[currentColorIndex];
-    if (c === 'rainbow') {
-        rainbowHue = (rainbowHue + 2) % 360;
-        return `hsl(${rainbowHue}, 100%, 60%)`;
-    }
-    return c;
-}
-
-function drawNeonSegment(ctx, x1, y1, x2, y2, color, width) {
-    ctx.save();
-    ctx.lineCap = 'round';
+function drawStrokeSegment(ctx, p1, p2, color, size, glow) {
+  ctx.save();
+  if (glow) {
     ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowBlur = size * 6;
+    ctx.shadowColor = color;
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(p1.x, p1.y);
+  ctx.lineTo(p2.x, p2.y);
+  ctx.stroke();
 
-    for (const layer of CONFIG.neonLayers) {
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.lineTo(x2, y2);
-        ctx.strokeStyle = layer.white ? '#ffffff' : color;
-        ctx.lineWidth = Math.max(0.5, width + layer.widthAdd);
-        ctx.shadowColor = color;
-        ctx.shadowBlur = layer.blur;
-        ctx.globalAlpha = layer.alpha;
-        ctx.stroke();
-    }
-    ctx.restore();
+  if (glow) {
+    // Inti putih terang
+    ctx.shadowBlur = size * 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = Math.max(1, size * 0.3);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
-// ==================== PARTICLE SYSTEM ====================
-function spawnParticles(x, y, color, count) {
-    for (let i = 0; i < count; i++) {
-        particles.push({
-            x, y,
-            vx: (Math.random() - 0.5) * 5,
-            vy: (Math.random() - 0.5) * 5,
-            life: 1,
-            decay: 0.025 + Math.random() * 0.035,
-            size: 1 + Math.random() * 3,
-            color
-        });
+function drawStrokeFull(ctx, points, color, size, glow) {
+  if (points.length < 2) return;
+  ctx.save();
+  if (glow) {
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.shadowBlur = size * 6;
+    ctx.shadowColor = color;
+  }
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  if (points.length === 2) {
+    ctx.lineTo(points[1].x, points[1].y);
+  } else {
+    for (let i = 1; i < points.length - 1; i++) {
+      const mx = (points[i].x + points[i + 1].x) / 2;
+      const my = (points[i].y + points[i + 1].y) / 2;
+      ctx.quadraticCurveTo(points[i].x, points[i].y, mx, my);
     }
-    // Batasi jumlah partikel
-    if (particles.length > 300) particles.splice(0, particles.length - 300);
+    ctx.lineTo(points[points.length - 1].x, points[points.length - 1].y);
+  }
+  ctx.stroke();
+  if (glow) {
+    ctx.shadowBlur = size * 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = Math.max(1, size * 0.3);
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
-function updateAndDrawParticles(ctx) {
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.96;
-        p.vy *= 0.96;
-        p.life -= p.decay;
-        if (p.life <= 0) { particles.splice(i, 1); continue; }
+function commitCurrentStroke() {
+  if (S.currentStroke.length < 2) { S.currentStroke = []; return; }
+  const c = S.lastStrokeColor || S.color;
+  const sz = S.brushSize;
+  const gl = S.glow;
+  const pts = S.currentStroke;
 
-        ctx.save();
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = p.life * 0.5;
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-    }
+  drawStrokeFull(persistCtx, pts, c, sz, gl);
+
+  // Symmetry: gambar mirror
+  if (S.mode === 'symmetry') {
+    const mirrorPts = pts.map(p => ({ x: persistCanvas.width - p.x, y: p.y }));
+    drawStrokeFull(persistCtx, mirrorPts, c, sz, gl);
+  }
+
+  S.currentStroke = [];
+  S.lastDrawPos = null;
 }
 
-// ==================== GESTURE DETECTION ====================
-function detectGesture(landmarks) {
-    // Cek apakah jari extended (tip di atas PIP dalam koordinat screen)
-    const indexUp = landmarks[8].y < landmarks[6].y;
-    const middleUp = landmarks[12].y < landmarks[10].y;
-    const ringUp = landmarks[16].y < landmarks[14].y;
-    const pinkyUp = landmarks[20].y < landmarks[18].y;
+// ─── CURSOR RENDERING ───────────────────────────────
+function drawCursor(ctx, pos, gesture) {
+  if (!pos) return;
+  const c = S.rainbow ? `hsl(${S.hue},100%,60%)` : S.color;
+  const r = S.brushSize * 2.5;
 
-    // Thumb: cek jarak tip ke wrist vs IP ke wrist
-    const thumbTipDist = dist(landmarks[4], landmarks[2]);
-    const thumbIpDist = dist(landmarks[3], landmarks[2]);
-    const thumbUp = thumbTipDist > thumbIpDist * 1.1;
+  ctx.save();
+  // Outer ring glow
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, r + 8, 0, Math.PI * 2);
+  ctx.strokeStyle = c;
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = c;
+  ctx.stroke();
 
-    // Pinch: jarak thumb tip ke index tip
-    const pinchDist = dist(landmarks[4], landmarks[8]);
-    const isPinch = pinchDist < CONFIG.pinchThreshold;
+  // Inner dot
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
 
-    const extendedCount = [thumbUp, indexUp, middleUp, ringUp, pinkyUp].filter(Boolean).length;
-
-    // Prioritas: pinch > open palm > fist > peace > draw
-    if (isPinch) {
-        return { gesture: 'pinch', point: { x: (landmarks[4].x + landmarks[8].x) / 2, y: (landmarks[4].y + landmarks[8].y) / 2 } };
-    }
-    if (extendedCount >= 5) return { gesture: 'open_palm' };
-    if (extendedCount === 0) return { gesture: 'fist' };
-    if (indexUp && middleUp && !ringUp && !pinkyUp) return { gesture: 'peace' };
-    if (indexUp && !middleUp && !ringUp && !pinkyUp) return { gesture: 'draw', point: landmarks[8] };
-
-    return { gesture: 'unknown' };
+  // Gesture icon
+  ctx.shadowBlur = 0;
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.font = '14px Rajdhani';
+  ctx.fillStyle = c;
+  ctx.textAlign = 'center';
+  const labels = { draw: 'DRAW', clear: 'CLEAR', pinch: 'DRAG', pause: 'PAUSE', color: 'COLOR' };
+  if (labels[gesture]) {
+    ctx.fillText(labels[gesture], pos.x, pos.y - r - 16);
+  }
+  ctx.restore();
 }
 
-// Gesture metadata untuk UI
-const GESTURE_META = {
-    draw: { icon: '☝️', name: 'Draw' },
-    open_palm: { icon: '✋', name: 'Clear' },
-    pinch: { icon: '🤏', name: 'Drag' },
-    fist: { icon: '✊', name: 'Pause' },
-    peace: { icon: '✌️', name: 'Color Cycle' },
-    unknown: { icon: '❓', name: 'Waiting...' }
+// ─── CAMERA PREVIEW RENDERING ───────────────────────
+function renderCamPreview(results) {
+  const w = camPreview.width, h = camPreview.height;
+  camCtx.clearRect(0, 0, w, h);
+  // Gambar video (di-mirror)
+  camCtx.save();
+  camCtx.translate(w, 0);
+  camCtx.scale(-1, 1);
+  camCtx.drawImage(results.image, 0, 0, w, h);
+  camCtx.restore();
+
+  if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+    const lm = results.multiHandLandmarks[0];
+    // Gambar koneksi
+    camCtx.strokeStyle = 'rgba(0,240,255,0.6)';
+    camCtx.lineWidth = 1.2;
+    for (const [a, b] of HAND_CONNS) {
+      const ax = (1 - lm[a].x) * w, ay = lm[a].y * h;
+      const bx = (1 - lm[b].x) * w, by = lm[b].y * h;
+      camCtx.beginPath();
+      camCtx.moveTo(ax, ay);
+      camCtx.lineTo(bx, by);
+      camCtx.stroke();
+    }
+    // Gambar titik landmark
+    for (let i = 0; i < lm.length; i++) {
+      const x = (1 - lm[i].x) * w, y = lm[i].y * h;
+      camCtx.beginPath();
+      camCtx.arc(x, y, i === 8 ? 4 : 2, 0, Math.PI * 2);
+      camCtx.fillStyle = i === 8 ? '#ff006e' : '#00f0ff';
+      camCtx.fill();
+    }
+  }
+}
+
+// ─── MAIN RENDER LOOP ───────────────────────────────
+let animId;
+function renderLoop() {
+  const w = drawCanvas.width, h = drawCanvas.height;
+  drawCtx.clearRect(0, 0, w, h);
+
+  // Background gradien gelap
+  const bg = S.darkMode ? '#060b18' : '#eef1f7';
+  drawCtx.fillStyle = bg;
+  drawCtx.fillRect(0, 0, w, h);
+
+  // Gambar persistent strokes dengan offset
+  drawCtx.save();
+  drawCtx.translate(S.offset.x, S.offset.y);
+  drawCtx.drawImage(persistCanvas, 0, 0);
+
+  // Gambar current stroke
+  if (S.currentStroke.length >= 2 && S.drawing && !S.paused) {
+    const c = S.rainbow ? `hsl(${S.hue},100%,60%)` : S.color;
+    drawStrokeFull(drawCtx, S.currentStroke, c, S.brushSize, S.glow);
+    if (S.mode === 'symmetry') {
+      const mp = S.currentStroke.map(p => ({ x: w - p.x, y: p.y }));
+      drawStrokeFull(drawCtx, mp, c, S.brushSize, S.glow);
+    }
+  }
+  drawCtx.restore();
+
+  // Trail effect: gambar trail canvas di atas
+  if (S.mode === 'trail') {
+    // Fade trail
+    trailCtx.fillStyle = S.darkMode ? 'rgba(6,11,24,0.035)' : 'rgba(238,241,247,0.035)';
+    trailCtx.fillRect(0, 0, w, h);
+    drawCtx.globalCompositeOperation = 'lighter';
+    drawCtx.drawImage(trailCanvas, 0, 0);
+    drawCtx.globalCompositeOperation = 'source-over';
+  }
+
+  // UI overlay: cursor
+  uiCtx.clearRect(0, 0, w, h);
+  if (S.fingerPos && S.handPresent) {
+    drawCursor(uiCtx, S.fingerPos, S.gesture);
+  }
+
+  // Grid halus sebagai referensi ruang
+  drawGrid(drawCtx, w, h);
+
+  animId = requestAnimationFrame(renderLoop);
+}
+
+function drawGrid(ctx, w, h) {
+  ctx.save();
+  ctx.strokeStyle = S.darkMode ? 'rgba(0,240,255,0.03)' : 'rgba(0,100,150,0.04)';
+  ctx.lineWidth = 0.5;
+  const step = 60;
+  for (let x = 0; x < w; x += step) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = 0; y < h; y += step) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ─── MEDIAPIPE SETUP ────────────────────────────────
+function setupMediaPipe() {
+  return new Promise((resolve, reject) => {
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+    hands.setOptions({
+      maxNumHands: 1,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.7,
+      minTrackingConfidence: 0.5,
+    });
+
+    hands.onResults((results) => {
+      renderCamPreview(results);
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        S.handPresent = true;
+        const lm = results.multiHandLandmarks[0];
+
+        // Posisi ujung telunjuk di canvas utama (di-mirror)
+        const rawX = (1 - lm[8].x) * drawCanvas.width;
+        const rawY = lm[8].y * drawCanvas.height;
+        S.rawFingerPos = { x: rawX, y: rawY };
+        S.fingerPos = smoothPoint({ x: rawX, y: rawY });
+
+        // Deteksi gesture
+        const g = detectGesture(lm);
+        handleGesture(g, lm);
+      } else {
+        S.handPresent = false;
+        S.fingerPos = null;
+        if (S.drawing) {
+          commitCurrentStroke();
+          S.drawing = false;
+        }
+        S.gesture = 'none';
+        updateGestureUI('none');
+      }
+    });
+
+    // Mulai kamera
+    const camera = new Camera(camVideo, {
+      onFrame: async () => { await hands.send({ image: camVideo }); },
+      width: CFG.camW,
+      height: CFG.camH,
+    });
+
+    camera.start().then(() => {
+      S.cameraReady = true;
+      resolve();
+    }).catch(reject);
+  });
+}
+
+// ─── GESTURE HANDLER ────────────────────────────────
+let clearHoldStart = 0;
+let colorCooldown = 0;
+
+function handleGesture(gesture, lm) {
+  const now = Date.now();
+  const prevGesture = S.gesture;
+  S.gesture = gesture;
+  updateGestureUI(gesture);
+
+  // ─── DRAW ───
+  if (gesture === 'draw') {
+    if (!S.drawing && !S.paused) {
+      S.drawing = true;
+      S.currentStroke = [];
+      S.lastStrokeColor = getColor();
+      sfx.drawStart();
+    }
+    if (S.drawing && !S.paused) {
+      const pos = S.fingerPos;
+      if (pos) {
+        if (!S.lastDrawPos || dist(pos, S.lastDrawPos) > CFG.minDist) {
+          S.currentStroke.push({ x: pos.x - S.offset.x, y: pos.y - S.offset.y });
+          S.lastDrawPos = { ...pos };
+          S.lastStrokeColor = getColor();
+
+          // Trail mode: gambar di trail canvas
+          if (S.mode === 'trail' && S.currentStroke.length >= 2) {
+            const p1 = S.currentStroke[S.currentStroke.length - 2];
+            const p2 = S.currentStroke[S.currentStroke.length - 1];
+            drawStrokeSegment(trailCtx, p1, p2, S.lastStrokeColor, S.brushSize * 2.5, S.glow);
+          }
+        }
+      }
+    }
+  } else {
+    if (S.drawing) {
+      commitCurrentStroke();
+      S.drawing = false;
+      if (prevGesture === 'draw') sfx.drawEnd();
+    }
+  }
+
+  // ─── CLEAR ─── (hold 0.6s)
+  if (gesture === 'clear') {
+    if (prevGesture !== 'clear') {
+      clearHoldStart = now;
+    } else if (now - clearHoldStart > CFG.gestureHoldMs) {
+      clearAllCanvases();
+      S.offset = { x: 0, y: 0 };
+      clearHoldStart = now + 9999; // prevent repeat
+      sfx.clear();
+      flashClear();
+    }
+  }
+
+  // ─── PINCH / DRAG ───
+  if (gesture === 'pinch') {
+    if (prevGesture !== 'pinch') {
+      S.dragStart = { ...S.fingerPos };
+      S.dragOffsetStart = { ...S.offset };
+      sfx.pinch();
+    }
+    if (S.dragStart && S.fingerPos) {
+      S.offset.x = S.dragOffsetStart.x + (S.fingerPos.x - S.dragStart.x);
+      S.offset.y = S.dragOffsetStart.y + (S.fingerPos.y - S.dragStart.y);
+    }
+  } else {
+    S.dragStart = null;
+  }
+
+  // ─── PAUSE ───
+  if (gesture === 'pause' && prevGesture !== 'pause') {
+    S.paused = true;
+    sfx.pause();
+  } else if (gesture !== 'pause' && gesture !== 'none') {
+    S.paused = false;
+  }
+
+  // ─── COLOR CHANGE ───
+  if (gesture === 'color' && prevGesture !== 'color' && now - colorCooldown > 500) {
+    S.colorIdx = (S.colorIdx + 1) % CFG.colors.length;
+    S.color = CFG.colors[S.colorIdx];
+    colorCooldown = now;
+    sfx.colorChange();
+    updateColorDots();
+  }
+}
+
+// ─── GESTURE UI ─────────────────────────────────────
+const gestureEl = document.getElementById('gestureIndicator');
+const gestureLabels = {
+  draw: '&#x261D; DRAWING', clear: '&#x270B; HOLD TO CLEAR',
+  pinch: '&#x1F90F; DRAGGING', pause: '&#x270A; PAUSED',
+  color: '&#x270C; COLOR CHANGE', none: ''
 };
 
-// ==================== CANVAS OPERATIONS ====================
-function clearDrawCanvas() {
-    drawCtx.save();
-    drawCtx.globalCompositeOperation = 'source-over';
-    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    drawCtx.restore();
+function updateGestureUI(g) {
+  gestureEl.innerHTML = gestureLabels[g] || '';
+  gestureEl.classList.toggle('show', g !== 'none' && g !== 'draw');
 }
 
-function panCanvasContent(dx, dy) {
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = drawCanvas.width;
-    tempCanvas.height = drawCanvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(drawCanvas, 0, 0);
-    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-    drawCtx.drawImage(tempCanvas, dx, dy);
+function flashClear() {
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;inset:0;background:rgba(0,240,255,0.08);z-index:100;pointer-events:none';
+  document.body.appendChild(el);
+  gsap.to(el, { opacity: 0, duration: 0.5, onComplete: () => el.remove() });
 }
 
-function cycleColor() {
-    currentColorIndex = (currentColorIndex + 1) % CONFIG.colors.length;
-    updateColorSwatchUI();
-    showToast(`Color: ${CONFIG.colors[currentColorIndex] === 'rainbow' ? 'Rainbow' : CONFIG.colors[currentColorIndex]}`, 'fa-palette');
-}
-
-function updateColorSwatchUI() {
-    document.querySelectorAll('.color-swatch').forEach((el, i) => {
-        el.classList.toggle('active', i === currentColorIndex);
+// ─── COLOR PALETTE ──────────────────────────────────
+function buildColorDots() {
+  const row = document.getElementById('colorRow');
+  row.innerHTML = '';
+  CFG.colors.forEach((c, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'color-dot' + (i === S.colorIdx ? ' active' : '');
+    dot.style.background = c;
+    dot.style.color = c;
+    dot.addEventListener('click', () => {
+      S.colorIdx = i; S.color = c;
+      updateColorDots();
+      sfx.colorChange();
     });
+    row.appendChild(dot);
+  });
+}
+function updateColorDots() {
+  document.querySelectorAll('.color-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === S.colorIdx);
+  });
 }
 
-// ==================== TRAIL MODE ====================
-function startTrailMode() {
-    if (trailIntervalId) return;
-    trailIntervalId = setInterval(() => {
-        drawCtx.save();
-        drawCtx.globalCompositeOperation = 'destination-out';
-        drawCtx.fillStyle = `rgba(0, 0, 0, ${CONFIG.trailFadeAlpha})`;
-        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
-        drawCtx.restore();
-    }, CONFIG.trailInterval);
-}
+// ─── UI CONTROLS ────────────────────────────────────
+function setupControls() {
+  const $ = (id) => document.getElementById(id);
 
-function stopTrailMode() {
-    if (trailIntervalId) { clearInterval(trailIntervalId); trailIntervalId = null; }
-}
+  // Mode buttons
+  $('btnDraw').addEventListener('click', () => {
+    S.mode = 'normal';
+    updateModeUI();
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+  });
+  $('btnSymmetry').addEventListener('click', () => {
+    S.mode = 'symmetry';
+    updateModeUI();
+  });
+  $('btnTrail').addEventListener('click', () => {
+    S.mode = 'trail';
+    updateModeUI();
+  });
 
-// ==================== OVERLAY RENDERING ====================
-function drawHandOverlay(landmarks) {
-    const w = overlayCanvas.width;
-    const h = overlayCanvas.height;
+  // Toggle buttons
+  $('btnGlow').addEventListener('click', () => {
+    S.glow = !S.glow;
+    $('btnGlow').classList.toggle('active', S.glow);
+  });
+  $('btnRainbow').addEventListener('click', () => {
+    S.rainbow = !S.rainbow;
+    $('btnRainbow').classList.toggle('active', S.rainbow);
+  });
 
-    // Koneksi antar landmark (hand skeleton)
-    const connections = [
-        [0,1],[1,2],[2,3],[3,4],
-        [0,5],[5,6],[6,7],[7,8],
-        [0,9],[9,10],[10,11],[11,12],
-        [0,13],[13,14],[14,15],[15,16],
-        [0,17],[17,18],[18,19],[19,20],
-        [5,9],[9,13],[13,17]
-    ];
+  // Action buttons
+  $('btnClear').addEventListener('click', () => {
+    clearAllCanvases();
+    S.offset = { x: 0, y: 0 };
+    sfx.clear();
+    flashClear();
+  });
 
-    overlayCtx.save();
-    overlayCtx.globalAlpha = 0.35;
+  $('btnSave').addEventListener('click', () => showScreenshotPreview());
 
-    // Gambar koneksi
-    overlayCtx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
-    overlayCtx.lineWidth = 1.5;
-    overlayCtx.shadowColor = '#00F0FF';
-    overlayCtx.shadowBlur = 6;
-    for (const [a, b] of connections) {
-        const ax = (1 - landmarks[a].x) * w;
-        const ay = landmarks[a].y * h;
-        const bx = (1 - landmarks[b].x) * w;
-        const by = landmarks[b].y * h;
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(ax, ay);
-        overlayCtx.lineTo(bx, by);
-        overlayCtx.stroke();
-    }
+  $('btnRecord').addEventListener('click', () => toggleRecording());
 
-    // Gambar landmark points
-    for (let i = 0; i < 21; i++) {
-        const x = (1 - landmarks[i].x) * w;
-        const y = landmarks[i].y * h;
-        const r = (i === 4 || i === 8) ? 5 : 3;
-        overlayCtx.beginPath();
-        overlayCtx.arc(x, y, r, 0, Math.PI * 2);
-        overlayCtx.fillStyle = (i === 8) ? '#00FF88' : (i === 4) ? '#FF0055' : '#00F0FF';
-        overlayCtx.shadowColor = overlayCtx.fillStyle;
-        overlayCtx.shadowBlur = 8;
-        overlayCtx.fill();
-    }
+  $('btnTutorial').addEventListener('click', () => {
+    document.getElementById('tutorial').classList.add('show');
+  });
+  $('closeTutorial').addEventListener('click', () => {
+    document.getElementById('tutorial').classList.remove('show');
+  });
 
-    overlayCtx.restore();
-}
+  $('btnTheme').addEventListener('click', () => {
+    S.darkMode = !S.darkMode;
+    document.body.classList.toggle('light', !S.darkMode);
+    $('btnTheme').querySelector('i').className = S.darkMode ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+  });
 
-function drawCursorGlow(x, y, color, active) {
-    overlayCtx.save();
-    overlayCtx.globalCompositeOperation = 'lighter';
-
-    const baseSize = active ? 20 : 14;
-    const alpha = active ? 0.4 : 0.15;
-
-    // Outer glow
-    const grad = overlayCtx.createRadialGradient(x, y, 0, x, y, baseSize);
-    grad.addColorStop(0, color);
-    grad.addColorStop(1, 'rgba(0,0,0,0)');
-    overlayCtx.globalAlpha = alpha;
-    overlayCtx.fillStyle = grad;
-    overlayCtx.beginPath();
-    overlayCtx.arc(x, y, baseSize, 0, Math.PI * 2);
-    overlayCtx.fill();
-
-    // Core dot
-    overlayCtx.globalAlpha = active ? 0.9 : 0.4;
-    overlayCtx.fillStyle = '#ffffff';
-    overlayCtx.shadowColor = color;
-    overlayCtx.shadowBlur = 12;
-    overlayCtx.beginPath();
-    overlayCtx.arc(x, y, active ? 3 : 2, 0, Math.PI * 2);
-    overlayCtx.fill();
-
-    // Crosshair
-    overlayCtx.globalAlpha = 0.2;
-    overlayCtx.strokeStyle = color;
-    overlayCtx.lineWidth = 1;
-    overlayCtx.shadowBlur = 0;
-    const ch = active ? 12 : 8;
-    overlayCtx.beginPath();
-    overlayCtx.moveTo(x - ch, y); overlayCtx.lineTo(x + ch, y);
-    overlayCtx.moveTo(x, y - ch); overlayCtx.lineTo(x, y + ch);
-    overlayCtx.stroke();
-
-    overlayCtx.restore();
-}
-
-// ==================== MAIN HANDLER: MediaPipe Results ====================
-let lastGestureForSound = '';
-
-function onResults(results) {
-    // Update FPS
-    frameCount++;
-    const now = performance.now();
-    if (now - lastFpsTime >= 1000) {
-        currentFps = frameCount;
-        frameCount = 0;
-        lastFpsTime = now;
-        fpsDisplay.textContent = currentFps;
-    }
-
-    // Clear overlay
-    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-        // Tidak ada tangan terdeteksi
-        prevDrawPoint = null;
-        smoothedPoint = null;
-        isDragging = false;
-        updateGestureUI('unknown');
-        updateAndDrawParticles(overlayCtx);
-        return;
-    }
-
-    const landmarks = results.multiHandLandmarks[0];
-    const gestureResult = detectGesture(landmarks);
-    const { gesture, point } = gestureResult;
-
-    // Update gesture UI
-    updateGestureUI(gesture);
-
-    // Gambar hand skeleton di overlay
-    drawHandOverlay(landmarks);
-
-    const W = drawCanvas.width;
-    const H = drawCanvas.height;
-    const now2 = Date.now();
-
-    // ===== GESTURE HANDLING =====
-
-    // ONE-SHOT: Clear canvas
-    if (gesture === 'open_palm' && now2 - lastClearTime > CONFIG.gestureDebounce.clear) {
-        clearDrawCanvas();
-        lastClearTime = now2;
-        playSound('clear');
-        showToast('Canvas cleared', 'fa-eraser');
-        prevDrawPoint = null;
-        smoothedPoint = null;
-        isDragging = false;
-    }
-
-    // ONE-SHOT: Toggle pause
-    if (gesture === 'fist' && now2 - lastPauseTime > CONFIG.gestureDebounce.pause) {
-        isPaused = !isPaused;
-        lastPauseTime = now2;
-        playSound('pause');
-        showToast(isPaused ? 'Drawing paused' : 'Drawing resumed', isPaused ? 'fa-pause' : 'fa-play');
-        prevDrawPoint = null;
-    }
-
-    // ONE-SHOT: Cycle color
-    if (gesture === 'peace' && now2 - lastColorTime > CONFIG.gestureDebounce.color) {
-        cycleColor();
-        playSound('color');
-        lastColorTime = now2;
-        prevDrawPoint = null;
-    }
-
-    // CONTINUOUS: Draw
-    if (gesture === 'draw' && !isPaused && point) {
-        const rawPoint = {
-            x: (1 - point.x) * W,
-            y: point.y * H
-        };
-        smoothedPoint = smoothPoint(rawPoint, smoothedPoint, CONFIG.smoothFactor);
-        const color = getCurrentColor();
-
-        if (prevDrawPoint) {
-            const points = interpolatePoints(prevDrawPoint, smoothedPoint, CONFIG.interpolateSpacing);
-            let from = prevDrawPoint;
-            for (const to of points) {
-                drawNeonSegment(drawCtx, from.x, from.y, to.x, to.y, color, brushSize);
-                // Symmetry mode
-                if (symmetryMode) {
-                    drawNeonSegment(drawCtx, W - from.x, from.y, W - to.x, to.y, color, brushSize);
-                }
-                from = to;
-            }
-            prevDrawPoint = from;
-        } else {
-            prevDrawPoint = { ...smoothedPoint };
-        }
-
-        // Spawn partikel di posisi kursor
-        spawnParticles(smoothedPoint.x, smoothedPoint.y, color, 2);
-
-        // Cursor glow (aktif)
-        drawCursorGlow(smoothedPoint.x, smoothedPoint.y, color, true);
-        isDragging = false;
-    }
-    // CONTINUOUS: Pinch/Drag
-    else if (gesture === 'pinch' && point) {
-        const rawPoint = {
-            x: (1 - point.x) * W,
-            y: point.y * H
-        };
-        if (!isDragging) {
-            isDragging = true;
-            dragStart = rawPoint;
-            if (lastGestureForSound !== 'pinch') playSound('pinch');
-        } else if (dragStart) {
-            const dx = rawPoint.x - dragStart.x;
-            const dy = rawPoint.y - dragStart.y;
-            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
-                panCanvasContent(dx, dy);
-                dragStart = rawPoint;
-            }
-        }
-        prevDrawPoint = null;
-        // Cursor glow di pinch point
-        drawCursorGlow(rawPoint.x, rawPoint.y, '#FF6B00', true);
-    }
-    else {
-        prevDrawPoint = null;
-        isDragging = false;
-        // Idle cursor di index finger tip
-        if (landmarks[8]) {
-            const ix = (1 - landmarks[8].x) * W;
-            const iy = landmarks[8].y * H;
-            drawCursorGlow(ix, iy, 'rgba(0,240,255,0.5)', false);
-        }
-    }
-
-    lastGestureForSound = gesture;
-
-    // Update & draw partikel
-    updateAndDrawParticles(overlayCtx);
-}
-
-function updateGestureUI(gesture) {
-    const meta = GESTURE_META[gesture] || GESTURE_META.unknown;
-    gestIcon.textContent = meta.icon;
-    gestName.textContent = isPaused && gesture !== 'fist' ? 'PAUSED' : meta.name;
-    gestureDisplay.textContent = meta.name;
-}
-
-// ==================== MEDIAPIPE INITIALIZATION ====================
-async function initMediaPipe() {
-    loaderText.textContent = 'Loading hand tracking model...';
-    loaderFill.style.width = '20%';
-
-    try {
-        handsInstance = new Hands({
-            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-        });
-
-        handsInstance.setOptions({
-            maxNumHands: 1,
-            modelComplexity: 1,
-            minDetectionConfidence: 0.7,
-            minTrackingConfidence: 0.6
-        });
-
-        handsInstance.onResults(onResults);
-
-        loaderText.textContent = 'Accessing camera...';
-        loaderFill.style.width = '50%';
-
-        // Akses kamera
-        const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
-        });
-        camVideo.srcObject = stream;
-        previewVideo.srcObject = stream;
-        await camVideo.play();
-        await previewVideo.play();
-
-        loaderText.textContent = 'Starting hand tracking...';
-        loaderFill.style.width = '75%';
-
-        // Mulai camera loop
-        cameraInstance = new Camera(camVideo, {
-            onFrame: async () => {
-                await handsInstance.send({ image: camVideo });
-            },
-            width: 1280,
-            height: 720
-        });
-        await cameraInstance.start();
-
-        loaderText.textContent = 'Ready!';
-        loaderFill.style.width = '100%';
-
-        // Tunggu sebentar lalu tampilkan app
-        await new Promise(r => setTimeout(r, 600));
-        transitionToApp();
-
-    } catch (err) {
-        console.error('Init error:', err);
-        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-            showError('Camera access denied. Please allow camera permissions and reload the page.');
-        } else if (err.name === 'NotFoundError') {
-            showError('No camera found. Please connect a camera and reload.');
-        } else {
-            showError(`Failed to initialize: ${err.message}. Please check your browser compatibility and reload.`);
-        }
-    }
-}
-
-// ==================== SPLASH -> APP TRANSITION ====================
-function transitionToApp() {
-    gsap.to(splashEl, {
-        opacity: 0, scale: 1.05,
-        duration: 0.6, ease: 'power2.inOut',
-        onComplete: () => {
-            splashEl.style.display = 'none';
-            appEl.style.display = 'block';
-            gsap.from('#status-bar', { y: -50, opacity: 0, duration: 0.5, ease: 'power3.out' });
-            gsap.from('#ctrl-panel', { x: -80, opacity: 0, duration: 0.6, delay: 0.1, ease: 'power3.out' });
-            gsap.from('#gesture-indicator', { y: 40, opacity: 0, duration: 0.5, delay: 0.2, ease: 'power3.out' });
-            gsap.from('#cam-preview', { scale: 0.8, opacity: 0, duration: 0.5, delay: 0.3, ease: 'back.out(1.5)' });
-        }
-    });
-}
-
-// ==================== SPLASH ANIMATION ====================
-function animateSplash() {
-    // Buat huruf-huruf logo
-    const mainText = 'ZYECHS';
-    const subText = 'AIRDRAW PRO';
-    const logoMain = document.getElementById('logo-main');
-    const logoSub = document.getElementById('logo-sub');
-
-    mainText.split('').forEach(ch => {
-        const span = document.createElement('span');
-        span.className = 'letter';
-        span.textContent = ch;
-        logoMain.appendChild(span);
-    });
-    subText.split('').forEach(ch => {
-        const span = document.createElement('span');
-        span.className = 'letter';
-        span.textContent = ch === ' ' ? '\u00A0' : ch;
-        logoSub.appendChild(span);
-    });
-
-    const tl = gsap.timeline();
-
-    tl.from('#logo-main .letter', {
-        y: 60, opacity: 0, rotateX: -90,
-        stagger: 0.06, duration: 0.7,
-        ease: 'back.out(1.7)'
-    })
-    .from('#logo-sub .letter', {
-        y: 30, opacity: 0,
-        stagger: 0.025, duration: 0.4,
-        ease: 'power2.out'
-    }, '-=0.25')
-    .from('#splash-tagline', {
-        opacity: 0, y: 15, duration: 0.5
-    }, '-=0.1')
-    .from('.loader-wrap', {
-        scaleX: 0, opacity: 0, duration: 0.4, ease: 'power2.out'
-    }, '-=0.2')
-    .from('#loader-text', {
-        opacity: 0, duration: 0.3
-    }, '-=0.1');
-
-    // Mulai init setelah animasi splash selesai
-    tl.then(() => initMediaPipe());
-}
-
-// ==================== SAVE / SCREENSHOT ====================
-function captureScreenshot() {
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = drawCanvas.width;
-    tempCanvas.height = drawCanvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-
-    // Background gelap
-    tempCtx.fillStyle = '#08080F';
-    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-    // Gambar konten
-    tempCtx.drawImage(drawCanvas, 0, 0);
-
-    return tempCanvas.toDataURL('image/png');
-}
-
-function showScreenshotPreview() {
-    const dataUrl = captureScreenshot();
-    screenshotImg.src = dataUrl;
-    screenshotModal.classList.add('show');
-    gsap.from(screenshotModal, { opacity: 0, duration: 0.3 });
-    gsap.from(screenshotImg, { scale: 0.9, duration: 0.4, ease: 'back.out(1.4)' });
-}
-
-function downloadScreenshot() {
-    const dataUrl = captureScreenshot();
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `zyechs-airdraw-${Date.now()}.png`;
-    a.click();
-    closeScreenshotModal();
-    showToast('Image saved!', 'fa-check');
-}
-
-function closeScreenshotModal() {
-    gsap.to(screenshotModal, {
-        opacity: 0, duration: 0.2,
-        onComplete: () => screenshotModal.classList.remove('show')
-    });
-}
-
-// ==================== RECORDING ====================
-function toggleRecording() {
-    if (isRecording) {
-        stopRecording();
+  $('btnFullscreen').addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
     } else {
-        startRecording();
+      document.exitFullscreen();
     }
+  });
+
+  // Brush size
+  $('brushRange').addEventListener('input', (e) => {
+    S.brushSize = parseInt(e.target.value);
+  });
+
+  // Screenshot modal
+  $('btnCancelShot').addEventListener('click', () => {
+    document.getElementById('screenshotModal').classList.remove('show');
+  });
+  $('btnDownloadShot').addEventListener('click', () => {
+    const link = document.createElement('a');
+    link.download = 'zyechs-airdraw-' + Date.now() + '.png';
+    link.href = document.getElementById('previewImg').src;
+    link.click();
+    document.getElementById('screenshotModal').classList.remove('show');
+  });
+
+  // Init state
+  $('btnGlow').classList.add('active');
+  buildColorDots();
 }
 
-function startRecording() {
-    // Pastikan ada isi di canvas (tambahkan bg)
-    const recordCanvas = document.createElement('canvas');
-    recordCanvas.width = drawCanvas.width;
-    recordCanvas.height = drawCanvas.height;
-    const recordCtx = recordCanvas.getContext('2d');
+function updateModeUI() {
+  const badge = document.getElementById('modeBadge');
+  const labels = { normal: 'NORMAL', symmetry: 'SYMMETRY', trail: 'TRAIL FX' };
+  badge.textContent = labels[S.mode];
+  document.getElementById('btnDraw').classList.toggle('active', S.mode === 'normal');
+  document.getElementById('btnSymmetry').classList.toggle('active', S.mode === 'symmetry');
+  document.getElementById('btnTrail').classList.toggle('active', S.mode === 'trail');
+}
 
-    // Frame composer interval
-    const stream = recordCanvas.captureStream(30);
+// ─── SCREENSHOT PREVIEW ─────────────────────────────
+function showScreenshotPreview() {
+  // Gabungkan background + persist canvas
+  const tmp = document.createElement('canvas');
+  tmp.width = drawCanvas.width; tmp.height = drawCanvas.height;
+  const tc = tmp.getContext('2d');
+  const bg = S.darkMode ? '#060b18' : '#eef1f7';
+  tc.fillStyle = bg;
+  tc.fillRect(0, 0, tmp.width, tmp.height);
+  tc.drawImage(persistCanvas, S.offset.x, S.offset.y);
+  if (S.mode === 'trail') {
+    tc.globalCompositeOperation = 'lighter';
+    tc.drawImage(trailCanvas, 0, 0);
+  }
 
-    let mimeType = 'video/webm;codecs=vp9';
-    if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = 'video/webm;codecs=vp8';
-        if (!MediaRecorder.isTypeSupported(mimeType)) {
-            mimeType = 'video/webm';
-        }
-    }
+  const dataURL = tmp.toDataURL('image/png');
+  document.getElementById('previewImg').src = dataURL;
+  document.getElementById('screenshotModal').classList.add('show');
+}
 
-    recordedChunks = [];
-    mediaRecorder = new MediaRecorder(stream, { mimeType });
-    mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-    };
-    mediaRecorder.onstop = () => {
-        clearInterval(recordFrameId);
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+// ─── RECORDING ──────────────────────────────────────
+function toggleRecording() {
+  const btn = document.getElementById('btnRecord');
+  const dot = document.getElementById('recDot');
+
+  if (!S.recording) {
+    // Mulai recording
+    try {
+      const stream = drawCanvas.captureStream(30);
+      S.recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      S.chunks = [];
+      S.recorder.ondataavailable = (e) => { if (e.data.size > 0) S.chunks.push(e.data); };
+      S.recorder.onstop = () => {
+        const blob = new Blob(S.chunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `zyechs-airdraw-${Date.now()}.webm`;
+        a.href = url; a.download = 'zyechs-airdraw-' + Date.now() + '.webm';
         a.click();
         URL.revokeObjectURL(url);
-        showToast('Video saved!', 'fa-check');
-    };
-
-    // Compose frames: bg + drawing
-    const recordFrameId = setInterval(() => {
-        recordCtx.fillStyle = '#08080F';
-        recordCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
-        recordCtx.drawImage(drawCanvas, 0, 0);
-    }, 33);
-
-    // Simpan interval ID agar bisa di-clear
-    mediaRecorder._frameInterval = recordFrameId;
-
-    mediaRecorder.start();
-    isRecording = true;
-    recDot.classList.add('active');
-    recLabel.style.display = 'inline';
-    document.getElementById('btn-record').classList.add('active');
-    showToast('Recording started', 'fa-circle');
-}
-
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        clearInterval(mediaRecorder._frameInterval);
-        mediaRecorder.stop();
+      };
+      S.recorder.start();
+      S.recording = true;
+      btn.classList.add('active');
+      dot.classList.add('show');
+    } catch (err) {
+      console.warn('Recording gagal:', err);
     }
-    isRecording = false;
-    recDot.classList.remove('active');
-    recLabel.style.display = 'none';
-    document.getElementById('btn-record').classList.remove('active');
+  } else {
+    // Stop recording
+    S.recorder.stop();
+    S.recording = false;
+    btn.classList.remove('active');
+    dot.classList.remove('show');
+  }
 }
 
-// ==================== UI EVENT BINDINGS ====================
-function initUI() {
-    // Brush size
-    document.getElementById('btn-size-up').addEventListener('click', () => {
-        brushSize = Math.min(CONFIG.brushMax, brushSize + 2);
-        brushSizeDisplay.textContent = brushSize + 'px';
-    });
-    document.getElementById('btn-size-down').addEventListener('click', () => {
-        brushSize = Math.max(CONFIG.brushMin, brushSize - 2);
-        brushSizeDisplay.textContent = brushSize + 'px';
-    });
+// ─── MOBILE DETECTION ───────────────────────────────
+function checkMobile() {
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  const isPortrait = window.innerHeight > window.innerWidth;
+  const warn = document.getElementById('mobileWarn');
+  if (isMobile && isPortrait) {
+    warn.style.display = 'flex';
+  } else {
+    warn.style.display = 'none';
+  }
+}
+window.addEventListener('orientationchange', checkMobile);
+window.addEventListener('resize', checkMobile);
 
-    // Color swatches
-    document.querySelectorAll('.color-swatch').forEach((el, i) => {
-        el.addEventListener('click', () => {
-            currentColorIndex = i;
-            updateColorSwatchUI();
-        });
-    });
+// ─── SPLASH SCREEN ──────────────────────────────────
+function playSplash() {
+  return new Promise((resolve) => {
+    const tl = gsap.timeline({ onComplete: resolve });
+    const splash = document.getElementById('splash');
 
-    // Symmetry toggle
-    document.getElementById('btn-symmetry').addEventListener('click', () => {
-        symmetryMode = !symmetryMode;
-        document.getElementById('btn-symmetry').classList.toggle('active', symmetryMode);
-        showToast(symmetryMode ? 'Symmetry ON' : 'Symmetry OFF', 'fa-arrows-left-right');
+    tl.from('#splash .logo-ring', {
+      scale: 0, rotation: -180, duration: 0.8, ease: 'back.out(1.7)'
+    })
+    .from('#splash h1', {
+      y: 40, opacity: 0, duration: 0.5, ease: 'power3.out'
+    }, '-=0.3')
+    .from('#splash p', {
+      y: 20, opacity: 0, duration: 0.4
+    }, '-=0.2')
+    .to('#loadBar', {
+      width: '100%', duration: 1.2, ease: 'power2.inOut'
+    }, '-=0.2')
+    .to(splash, {
+      opacity: 0, duration: 0.5, delay: 0.2
     });
-
-    // Trail toggle
-    document.getElementById('btn-trail').addEventListener('click', () => {
-        trailMode = !trailMode;
-        document.getElementById('btn-trail').classList.toggle('active', trailMode);
-        if (trailMode) { startTrailMode(); } else { stopTrailMode(); }
-        showToast(trailMode ? 'Trail ON' : 'Trail OFF', 'fa-wind');
-    });
-
-    // Save
-    document.getElementById('btn-save').addEventListener('click', () => {
-        ensureAudio();
-        showScreenshotPreview();
-    });
-    document.getElementById('btn-download').addEventListener('click', downloadScreenshot);
-    document.getElementById('btn-cancel-save').addEventListener('click', closeScreenshotModal);
-
-    // Record
-    document.getElementById('btn-record').addEventListener('click', () => {
-        ensureAudio();
-        toggleRecording();
-    });
-
-    // Clear
-    document.getElementById('btn-clear').addEventListener('click', () => {
-        ensureAudio();
-        clearDrawCanvas();
-        playSound('clear');
-        showToast('Canvas cleared', 'fa-eraser');
-    });
-
-    // Sound toggle
-    document.getElementById('btn-sound').addEventListener('click', () => {
-        ensureAudio();
-        soundEnabled = !soundEnabled;
-        const icon = document.querySelector('#btn-sound i');
-        icon.className = soundEnabled ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
-        document.getElementById('btn-sound').classList.toggle('active', !soundEnabled);
-        showToast(soundEnabled ? 'Sound ON' : 'Sound OFF', 'fa-volume-high');
-    });
-
-    // Theme toggle
-    document.getElementById('btn-theme').addEventListener('click', () => {
-        isDarkTheme = !isDarkTheme;
-        document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
-        const icon = document.querySelector('#btn-theme i');
-        icon.className = isDarkTheme ? 'fas fa-moon' : 'fas fa-sun';
-        showToast(isDarkTheme ? 'Dark mode' : 'Light mode', 'fa-circle-half-stroke');
-    });
-
-    // Tutorial
-    document.getElementById('btn-tutorial').addEventListener('click', () => {
-        tutorialEl.classList.add('show');
-        gsap.from('.tutorial-card', { scale: 0.9, opacity: 0, duration: 0.4, ease: 'back.out(1.3)' });
-    });
-    document.getElementById('tutorial-close').addEventListener('click', () => {
-        gsap.to(tutorialEl, {
-            opacity: 0, duration: 0.25,
-            onComplete: () => { tutorialEl.classList.remove('show'); tutorialEl.style.opacity = ''; }
-        });
-    });
-
-    // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-        switch(e.key.toLowerCase()) {
-            case 's':
-                e.preventDefault();
-                ensureAudio();
-                showScreenshotPreview();
-                break;
-            case 'r':
-                e.preventDefault();
-                ensureAudio();
-                toggleRecording();
-                break;
-            case 'c':
-                e.preventDefault();
-                ensureAudio();
-                clearDrawCanvas();
-                playSound('clear');
-                showToast('Canvas cleared', 'fa-eraser');
-                break;
-            case 't':
-                e.preventDefault();
-                trailMode = !trailMode;
-                document.getElementById('btn-trail').classList.toggle('active', trailMode);
-                if (trailMode) startTrailMode(); else stopTrailMode();
-                showToast(trailMode ? 'Trail ON' : 'Trail OFF', 'fa-wind');
-                break;
-            case 'm':
-                e.preventDefault();
-                symmetryMode = !symmetryMode;
-                document.getElementById('btn-symmetry').classList.toggle('active', symmetryMode);
-                showToast(symmetryMode ? 'Symmetry ON' : 'Symmetry OFF', 'fa-arrows-left-right');
-                break;
-            case 'escape':
-                if (tutorialEl.classList.contains('show')) {
-                    tutorialEl.classList.remove('show');
-                }
-                if (screenshotModal.classList.contains('show')) {
-                    closeScreenshotModal();
-                }
-                break;
-        }
-    });
-
-    // Klik di luar modal untuk tutup
-    screenshotModal.addEventListener('click', (e) => {
-        if (e.target === screenshotModal) closeScreenshotModal();
-    });
-    tutorialEl.addEventListener('click', (e) => {
-        if (e.target === tutorialEl) {
-            tutorialEl.classList.remove('show');
-        }
-    });
-
-    // Inisialisasi audio context pada first interaction
-    document.addEventListener('click', ensureAudio, { once: true });
-    document.addEventListener('touchstart', ensureAudio, { once: true });
+  });
 }
 
-// ==================== START ====================
-document.addEventListener('DOMContentLoaded', () => {
-    initUI();
-    animateSplash();
+// ─── LOADING OVERLAY (saat kamera loading) ──────────
+function showLoader(msg) {
+  let el = document.getElementById('camLoader');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'camLoader';
+    el.style.cssText = 'position:fixed;inset:0;z-index:150;background:rgba(6,11,24,0.85);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;flex-direction:column';
+    el.innerHTML = `
+      <div style="width:60px;height:60px;border:3px solid rgba(0,240,255,0.2);border-top-color:#00f0ff;border-radius:50%;animation:spin 1s linear infinite"></div>
+      <p style="margin-top:16px;font-family:Orbitron;font-size:.8rem;color:#00f0ff;letter-spacing:2px">${msg}</p>
+    `;
+    document.body.appendChild(el);
+  }
+}
+function hideLoader() {
+  const el = document.getElementById('camLoader');
+  if (el) el.remove();
+}
+
+// ─── INIT APP ───────────────────────────────────────
+async function initApp() {
+  initCanvases();
+  setupControls();
+  updateModeUI();
+  checkMobile();
+
+  // Aktifkan AudioContext pada interaksi pertama
+  document.addEventListener('click', () => sfx.init(), { once: true });
+  document.addEventListener('touchstart', () => sfx.init(), { once: true });
+
+  // Mulai render loop
+  renderLoop();
+
+  // Setup kamera + MediaPipe
+  showLoader('Initializing Camera...');
+  try {
+    await setupMediaPipe();
+    hideLoader();
+  } catch (err) {
+    hideLoader();
+    console.error('Kamera gagal:', err);
+    // Tampilkan pesan error yang user-friendly
+    const msg = document.createElement('div');
+    msg.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:200;text-align:center;padding:40px;background:var(--glass);border-radius:16px;border:1px solid var(--glass-border);backdrop-filter:blur(20px)';
+    msg.innerHTML = `
+      <i class="fa-solid fa-video-slash" style="font-size:2rem;color:var(--pink);margin-bottom:12px"></i>
+      <h3 style="font-family:Orbitron;color:var(--pink);font-size:1rem;margin-bottom:8px">Camera Access Denied</h3>
+      <p style="color:var(--muted);font-size:.85rem;max-width:300px">Please allow camera access to use hand tracking. Reload the page to try again.</p>
+    `;
+    document.body.appendChild(msg);
+  }
+
+  // Tampilkan tutorial saat pertama kali
+  setTimeout(() => {
+    document.getElementById('tutorial').classList.add('show');
+  }, 1500);
+}
+
+// ─── START ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await playSplash();
+  document.getElementById('splash').style.display = 'none';
+  initApp();
 });
 </script>
 </body>
