@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Zyechs AirDraw Pro</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg:#07070d;--fg:#e4e4ec;--muted:#5a5a72;
+  --accent:#00f0ff;--accent2:#ff2d75;--accent3:#00ff88;
+  --card:rgba(12,12,22,0.72);--glass:rgba(18,18,35,0.55);
+  --border:rgba(0,240,255,0.12);--glow:0 0 20px rgba(0,240,255,0.25);
+}
+.light-mode {
+  --bg:#eef0f6;--fg:#111128;--muted:#6b6b88;
+  --accent:#0099aa;--accent2:#cc1155;--accent3:#00aa55;
+  --card:rgba(255,255,255,0.72);--glass:rgba(255,255,255,0.55);
+  --border:rgba(0,153,170,0.18);--glow:0 0 15px rgba(0,153,170,0.15);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100vh;width:100vw}
+.font-display{font-family:'Orbitron',sans-serif}
+canvas{position:fixed;top:0;left:0;width:100%;height:100%}
+#camVideo{display:none}
+
+/* Grid background */
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:1;
+  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:60px 60px;opacity:.5}
+
+/* Splash Screen */
+#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+.splash-logo{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:900;
+  background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0}
+.splash-sub{font-family:'Orbitron',sans-serif;font-size:clamp(.9rem,2.5vw,1.6rem);font-weight:400;color:var(--accent);letter-spacing:.3em;opacity:0}
+.splash-tag{font-size:clamp(.75rem,1.8vw,1rem);color:var(--muted);letter-spacing:.15em;opacity:0;margin-top:12px}
+.splash-bar{width:180px;height:2px;background:var(--border);border-radius:2px;margin-top:30px;overflow:hidden;opacity:0}
+.splash-bar-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
+
+/* Loader */
+#loader{position:fixed;inset:0;z-index:9998;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px}
+.loader-ring{width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
+.loader-text{font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--accent);letter-spacing:.15em}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Landscape warning */
+#landscapeWarn{position:fixed;inset:0;z-index:9997;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.rotate-icon{font-size:3rem;color:var(--accent);animation:rotateAnim 2s ease-in-out infinite}
+@keyframes rotateAnim{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
+
+/* Gesture indicator */
+#gestureBadge{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:100;
+  padding:8px 24px;border-radius:40px;background:var(--glass);backdrop-filter:blur(16px);
+  border:1px solid var(--border);font-family:'Orbitron',sans-serif;font-size:.8rem;
+  letter-spacing:.1em;color:var(--accent);opacity:0;transition:opacity .3s;pointer-events:none}
+#gestureBadge.show{opacity:1}
+
+/* FPS */
+#fpsCounter{position:fixed;top:20px;right:20px;z-index:100;padding:4px 12px;border-radius:20px;
+  background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);
+  font-family:'Orbitron',sans-serif;font-size:.65rem;color:var(--accent3);letter-spacing:.05em}
+
+/* Control Panel */
+#controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;
+  display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:20px;
+  background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--border);
+  box-shadow:var(--glow);opacity:0;transition:opacity .5s}
+#controls.show{opacity:1}
+.ctrl-btn{width:42px;height:42px;border-radius:12px;border:1px solid var(--border);
+  background:rgba(0,240,255,0.04);color:var(--fg);display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .25s;font-size:1.1rem;position:relative}
+.ctrl-btn:hover{background:rgba(0,240,255,0.12);border-color:var(--accent);color:var(--accent);box-shadow:var(--glow)}
+.ctrl-btn.active{background:rgba(0,240,255,0.15);border-color:var(--accent);color:var(--accent)}
+.ctrl-sep{width:1px;height:28px;background:var(--border);margin:0 4px}
+.ctrl-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);
+  font-size:.55rem;color:var(--muted);white-space:nowrap;letter-spacing:.05em;font-family:'Rajdhani',sans-serif}
+
+/* Brush size indicator */
+#brushSizePopup{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:101;
+  padding:8px 16px;border-radius:14px;background:var(--glass);backdrop-filter:blur(16px);
+  border:1px solid var(--border);display:none;align-items:center;gap:12px}
+#brushSlider{-webkit-appearance:none;width:120px;height:4px;border-radius:2px;background:var(--border);outline:none}
+#brushSlider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:var(--glow)}
+
+/* Tutorial Overlay */
+#tutorial{position:fixed;inset:0;z-index:500;background:rgba(7,7,13,0.92);backdrop-filter:blur(20px);
+  display:none;align-items:center;justify-content:center;padding:20px}
+.tut-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;max-width:700px;width:100%}
+.tut-card{padding:20px 12px;border-radius:16px;background:var(--card);border:1px solid var(--border);
+  text-align:center;transition:all .3s}
+.tut-card:hover{border-color:var(--accent);box-shadow:var(--glow);transform:translateY(-4px)}
+.tut-icon{font-size:2.2rem;margin-bottom:8px;display:block}
+.tut-name{font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--accent);letter-spacing:.08em;margin-bottom:4px}
+.tut-desc{font-size:.8rem;color:var(--muted);line-height:1.3}
+.tut-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;
+  border:1px solid var(--border);background:var(--card);color:var(--fg);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .3s}
+.tut-close:hover{border-color:var(--accent2);color:var(--accent2)}
+.tut-title{position:absolute;top:24px;left:50%;transform:translateX(-50%);
+  font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--accent);letter-spacing:.15em}
+
+/* Preview Modal */
+#previewModal{position:fixed;inset:0;z-index:600;background:rgba(7,7,13,0.92);backdrop-filter:blur(20px);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:20px}
+#previewModal img{max-width:85vw;max-height:65vh;border-radius:12px;border:1px solid var(--border);box-shadow:var(--glow)}
+.modal-btns{display:flex;gap:10px}
+.modal-btn{padding:10px 28px;border-radius:12px;border:1px solid var(--border);background:var(--card);
+  color:var(--fg);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;
+  letter-spacing:.05em;transition:all .25s}
+.modal-btn:hover{border-color:var(--accent);color:var(--accent)}
+.modal-btn.primary{background:rgba(0,240,255,0.12);border-color:var(--accent);color:var(--accent)}
+
+/* Error toast */
+#errorToast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9000;
+  padding:12px 24px;border-radius:14px;background:rgba(255,45,117,0.15);border:1px solid rgba(255,45,117,0.3);
+  color:var(--accent2);font-size:.85rem;display:none;backdrop-filter:blur(12px);text-align:center;max-width:90vw}
+
+/* Status dot */
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);display:inline-block;
+  animation:pulse 2s ease-in-out infinite;margin-right:6px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Recording indicator */
+#recIndicator{position:fixed;top:20px;left:20px;z-index:100;display:none;align-items:center;gap:8px;
+  padding:6px 14px;border-radius:20px;background:rgba(255,45,117,0.15);border:1px solid rgba(255,45,117,0.3)}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite}
+
+@media(max-width:640px){
+  .tut-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .ctrl-btn{width:36px;height:36px;font-size:.95rem}
+  #controls{padding:8px 10px;gap:4px;bottom:12px}
+  .ctrl-label{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-logo">ZYECHS</div>
+  <div class="splash-sub">AIRDRAW PRO</div>
+  <div class="splash-tag">Draw in the Air, Like a Wizard</div>
+  <div class="splash-bar"><div class="splash-bar-fill" id="splashFill"></div></div>
+</div>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="loader-ring"></div>
+  <div class="loader-text" id="loaderText">Initializing camera...</div>
+</div>
+
+<!-- LANDSCAPE WARNING -->
+<div id="landscapeWarn">
+  <i class="ri-smartphone-line rotate-icon"></i>
+  <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--accent);letter-spacing:.1em">ROTATE TO LANDSCAPE</div>
+  <div style="font-size:.8rem;color:var(--muted)">Landscape mode required for AirDraw</div>
+</div>
+
+<!-- MAIN APP -->
+<video id="camVideo" playsinline></video>
+<canvas id="displayCanvas"></canvas>
+<div class="bg-grid"></div>
+
+<!-- Gesture Badge -->
+<div id="gestureBadge"></div>
+
+<!-- FPS Counter -->
+<div id="fpsCounter"><span class="status-dot"></span><span id="fpsVal">0</span> FPS</div>
+
+<!-- Recording Indicator -->
+<div id="recIndicator"><div class="rec-dot"></div><span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--accent2);letter-spacing:.08em">REC</span></div>
+
+<!-- Control Panel -->
+<div id="controls">
+  <button class="ctrl-btn" id="btnBrush" title="Brush Size"><i class="ri-pencil-line"></i><span class="ctrl-label">Brush</span></button>
+  <button class="ctrl-btn active" id="btnRainbow" title="Rainbow Mode"><i class="ri-rainbow-line"></i><span class="ctrl-label">Rainbow</span></button>
+  <button class="ctrl-btn" id="btnSymmetry" title="Symmetry Mode"><i class="ri-layout-column-line"></i><span class="ctrl-label">Mirror</span></button>
+  <button class="ctrl-btn" id="btnTrail" title="Trail Effect"><i class="ri-sparkling-2-line"></i><span class="ctrl-label">Trail</span></button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" id="btnCamToggle" title="Toggle Camera BG"><i class="ri-camera-line"></i><span class="ctrl-label">Camera</span></button>
+  <button class="ctrl-btn" id="btnSave" title="Save Image"><i class="ri-download-2-line"></i><span class="ctrl-label">Save</span></button>
+  <button class="ctrl-btn" id="btnRecord" title="Record Video"><i class="ri-vidicon-line"></i><span class="ctrl-label">Record</span></button>
+  <button class="ctrl-btn" id="btnClear" title="Clear Canvas"><i class="ri-delete-bin-line"></i><span class="ctrl-label">Clear</span></button>
+  <div class="ctrl-sep"></div>
+  <button class="ctrl-btn" id="btnTheme" title="Toggle Theme"><i class="ri-moon-line"></i><span class="ctrl-label">Theme</span></button>
+  <button class="ctrl-btn" id="btnTutorial" title="Gesture Guide"><i class="ri-question-line"></i><span class="ctrl-label">Help</span></button>
+</div>
+
+<!-- Brush Size Popup -->
+<div id="brushSizePopup">
+  <span style="font-size:.75rem;color:var(--muted)">Size</span>
+  <input type="range" id="brushSlider" min="1" max="20" value="4">
+  <span id="brushVal" style="font-size:.75rem;color:var(--accent);min-width:20px">4</span>
+</div>
+
+<!-- Tutorial Overlay -->
+<div id="tutorial">
+  <button class="tut-close" id="tutClose"><i class="ri-close-line"></i></button>
+  <div class="tut-title">GESTURE GUIDE</div>
+  <div class="tut-grid">
+    <div class="tut-card"><span class="tut-icon">☝️</span><div class="tut-name">POINT</div><div class="tut-desc">Draw on canvas</div></div>
+    <div class="tut-card"><span class="tut-icon">✋</span><div class="tut-name">OPEN HAND</div><div class="tut-desc">Clear canvas</div></div>
+    <div class="tut-card"><span class="tut-icon">🤏</span><div class="tut-name">PINCH</div><div class="tut-desc">Pan / drag canvas</div></div>
+    <div class="tut-card"><span class="tut-icon">✊</span><div class="tut-name">FIST</div><div class="tut-desc">Pause drawing</div></div>
+    <div class="tut-card"><span class="tut-icon">✌️</span><div class="tut-name">PEACE</div><div class="tut-desc">Change color</div></div>
+    <div class="tut-card"><span class="tut-icon">👍</span><div class="tut-name">THUMBS UP</div><div class="tut-desc">Save image</div></div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<div id="previewModal">
+  <img id="previewImg" src="" alt="Preview">
+  <div class="modal-btns">
+    <button class="modal-btn" id="previewClose">Cancel</button>
+    <button class="modal-btn primary" id="previewDownload"><i class="ri-download-2-line"></i> Download PNG</button>
+  </div>
+</div>
+
+<!-- Error Toast -->
+<div id="errorToast"></div>
+
+<script>
+// ==========================================
+// KONFIGURASI & KONSTANTA
+// ==========================================
+const CFG = {
+  maxHands: 1,
+  modelComplexity: 1,
+  minDetection: 0.7,
+  minTracking: 0.5,
+  smoothFactor: 0.45,      // AI smoothing (0=smooth, 1=raw)
+  gestureCooldown: 800,    // ms antar gesture aksi
+  pinchThreshold: 0.06,    // jarak pinch normalisasi
+  maxParticles: 250,
+  colors: ['#00f0ff','#ff2d75','#00ff88','#ffdd00','#ff6b00','#aa44ff','#ff4488','#44ddff'],
+  neonColors: ['#00f0ff','#ff2d75','#00ff88','#ffdd00','#ff6b00','#aa44ff','#ff4488','#44ddff']
+};
+
+// ==========================================
+// STATE MANAGEMENT
+// ==========================================
+const state = {
+  isDrawing: false,
+  currentGesture: 'none',
+  prevGesture: 'none',
+  colorIndex: 0,
+  brushSize: 4,
+  rainbowMode: true,
+  symmetryMode: false,
+  trailMode: false,
+  showCamera: true,
+  isDark: true,
+  isRecording: false,
+  isPaused: false,
+  panOffset: { x: 0, y: 0 },
+  pinchStart: null,
+  smoothPos: { x: 0, y: 0 },
+  currentStroke: [],
+  lastGestureTime: {},
+  fps: 0,
+  hue: 0,
+  handDetected: false,
+  latestResults: null,
+  canvasW: 0,
+  canvasH: 0
+};
+
+// ==========================================
+// ELEMEN DOM
+// ==========================================
+const $ = id => document.getElementById(id);
+const splash = $('splash'), splashFill = $('splashFill');
+const loader = $('loader'), loaderText = $('loaderText');
+const landscapeWarn = $('landscapeWarn');
+const displayCanvas = $('displayCanvas');
+const displayCtx = displayCanvas.getContext('2d');
+const video = $('camVideo');
+const gestureBadge = $('gestureBadge');
+const fpsVal = $('fpsVal');
+const controls = $('controls');
+const brushPopup = $('brushSizePopup');
+const brushSlider = $('brushSlider');
+const brushVal = $('brushVal');
+const tutorial = $('tutorial');
+const previewModal = $('previewModal');
+const previewImg = $('previewImg');
+const errorToast = $('errorToast');
+const recIndicator = $('recIndicator');
+
+// Offscreen drawing canvas
+const drawCanvas = document.createElement('canvas');
+const drawCtx = drawCanvas.getContext('2d');
+
+// ==========================================
+// SOUND ENGINE - Web Audio API synth
+// ==========================================
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.enabled = true;
+  }
+  init() {
+    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  _play(freq, type, dur, vol) {
+    if (!this.enabled || !this.ctx) return;
+    if (this.ctx.state === 'suspended') this.ctx.resume();
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.connect(g); g.connect(this.ctx.destination);
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
+    o.start(); o.stop(this.ctx.currentTime + dur);
+  }
+  draw()    { this._play(1200, 'sine', 0.06, 0.02); }
+  clear()   { this._play(150, 'sawtooth', 0.4, 0.08); }
+  color()   { this._play(880, 'triangle', 0.15, 0.06); this._play(1100, 'sine', 0.15, 0.04); }
+  save()    { this._play(600, 'square', 0.08, 0.04); this._play(900, 'sine', 0.12, 0.05); }
+  pause()   { this._play(300, 'sine', 0.2, 0.04); }
+  gesture() { this._play(700, 'sine', 0.08, 0.03); }
+}
+const sound = new SoundEngine();
+
+// ==========================================
+// PARTICLE SYSTEM
+// ==========================================
+const particles = [];
+function emitParticles(x, y, color, count = 3) {
+  for (let i = 0; i < count && particles.length < CFG.maxParticles; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3 + 1;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      color,
+      size: Math.random() * 2.5 + 0.8
+    });
+  }
+}
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.96; p.vy *= 0.96;
+    p.life -= 0.025;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+function drawParticles(ctx) {
+  for (const p of particles) {
+    ctx.save();
+    ctx.globalAlpha = p.life * 0.8;
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 8;
+    ctx.shadowColor = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ==========================================
+// GESTURE DETECTOR
+// ==========================================
+function dist(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function detectGesture(lm) {
+  // Deteksi jari terangkat: tip y < pip y (y menurun = bawah)
+  const palmCenter = {
+    x: (lm[0].x + lm[5].x + lm[17].x) / 3,
+    y: (lm[0].y + lm[5].y + lm[17].y) / 3
+  };
+
+  // Thumb: bandingkan jarak tip dari palm vs IP joint dari palm
+  const thumbExt = dist(lm[4], palmCenter) > dist(lm[3], palmCenter) * 1.15;
+  const indexUp  = lm[8].y  < lm[6].y;
+  const middleUp = lm[12].y < lm[10].y;
+  const ringUp   = lm[16].y < lm[14].y;
+  const pinkyUp  = lm[20].y < lm[18].y;
+
+  const up = [thumbExt, indexUp, middleUp, ringUp, pinkyUp];
+  const count = up.filter(Boolean).length;
+
+  // Pinch: jarak thumb tip & index tip
+  const pinchDist = dist(lm[4], lm[8]);
+
+  // Prioritas gesture
+  if (pinchDist < CFG.pinchThreshold && !middleUp && !ringUp) return 'pinch';
+  if (count === 0) return 'fist';
+  if (thumbExt && !indexUp && !middleUp && !ringUp && !pinkyUp) return 'thumbs_up';
+  if (!thumbExt && indexUp && !middleUp && !ringUp && !pinkyUp) return 'point';
+  if (!thumbExt && indexUp && middleUp && !ringUp && !pinkyUp) return 'peace';
+  if (count >= 4) return 'open';
+
+  return 'unknown';
+}
+
+const gestureLabels = {
+  point: 'Drawing', open: 'Clear', pinch: 'Pan', fist: 'Paused',
+  peace: 'Color Switch', thumbs_up: 'Save', unknown: '', none: ''
+};
+
+function canTriggerGesture(name) {
+  const now = Date.now();
+  if (state.lastGestureTime[name] && now - state.lastGestureTime[name] < CFG.gestureCooldown) return false;
+  state.lastGestureTime[name] = now;
+  return true;
+}
+
+// ==========================================
+// DRAWING ENGINE
+// ==========================================
+function getCurrentColor() {
+  if (state.rainbowMode) {
+    state.hue = (state.hue + 1.5) % 360;
+    return `hsl(${state.hue}, 100%, 60%)`;
+  }
+  return CFG.colors[state.colorIndex % CFG.colors.length];
+}
+
+function drawNeonSegment(ctx, x1, y1, x2, y2, color, size) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // Layer luar (glow besar)
+  ctx.strokeStyle = color;
+  ctx.lineWidth = size * 4;
+  ctx.globalAlpha = 0.08;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  // Layer mid glow
+  ctx.lineWidth = size * 2;
+  ctx.globalAlpha = 0.2;
+  ctx.shadowBlur = size * 3;
+  ctx.shadowColor = color;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  // Core stroke
+  ctx.lineWidth = size;
+  ctx.globalAlpha = 0.95;
+  ctx.shadowBlur = size * 2;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  // White hot center
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = Math.max(0.5, size * 0.25);
+  ctx.globalAlpha = 0.6;
+  ctx.shadowBlur = 0;
+  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+
+  ctx.restore();
+}
+
+function addDrawPoint(rawX, rawY) {
+  // Terapkan pan offset: posisi di drawCanvas = posisi layar - offset
+  const cx = rawX - state.panOffset.x;
+  const cy = rawY - state.panOffset.y;
+
+  // AI smoothing
+  state.smoothPos.x = state.smoothPos.x * CFG.smoothFactor + cx * (1 - CFG.smoothFactor);
+  state.smoothPos.y = state.smoothPos.y * CFG.smoothFactor + cy * (1 - CFG.smoothFactor);
+
+  const sx = state.smoothPos.x;
+  const sy = state.smoothPos.y;
+  const color = getCurrentColor();
+
+  if (state.currentStroke.length > 0) {
+    const prev = state.currentStroke[state.currentStroke.length - 1];
+    // Gambar segmen di drawCanvas
+    drawNeonSegment(drawCtx, prev.x, prev.y, sx, sy, color, state.brushSize);
+
+    // Symmetry mode
+    if (state.symmetryMode) {
+      const mx = drawCanvas.width - sx;
+      const mpx = drawCanvas.width - prev.x;
+      drawNeonSegment(drawCtx, mpx, prev.y, mx, sy, color, state.brushSize);
+    }
+
+    // Partikel
+    emitParticles(rawX, rawY, color, 2);
+  }
+
+  state.currentStroke.push({ x: sx, y: sy });
+}
+
+function endStroke() {
+  state.currentStroke = [];
+}
+
+function clearDrawing() {
+  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+  particles.length = 0;
+  state.panOffset = { x: 0, y: 0 };
+}
+
+// ==========================================
+// UI HELPERS
+// ==========================================
+function showError(msg) {
+  errorToast.textContent = msg;
+  errorToast.style.display = 'block';
+  setTimeout(() => errorToast.style.display = 'none', 4000);
+}
+
+function showGestureBadge(text) {
+  gestureBadge.textContent = text;
+  gestureBadge.classList.add('show');
+  clearTimeout(gestureBadge._timer);
+  gestureBadge._timer = setTimeout(() => gestureBadge.classList.remove('show'), 1200);
+}
+
+function toggleTheme() {
+  state.isDark = !state.isDark;
+  document.body.classList.toggle('light-mode', !state.isDark);
+  $('btnTheme').querySelector('i').className = state.isDark ? 'ri-moon-line' : 'ri-sun-line';
+}
+
+// ==========================================
+// CANVAS RESIZE
+// ==========================================
+function resizeCanvases() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  state.canvasW = w; state.canvasH = h;
+
+  displayCanvas.width = w * dpr;
+  displayCanvas.height = h * dpr;
+  displayCanvas.style.width = w + 'px';
+  displayCanvas.style.height = h + 'px';
+  displayCtx.scale(dpr, dpr);
+
+  // Simpan isi drawCanvas sebelum resize
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = drawCanvas.width;
+  tempCanvas.height = drawCanvas.height;
+  tempCanvas.getContext('2d').drawImage(drawCanvas, 0, 0);
+
+  drawCanvas.width = w * dpr;
+  drawCanvas.height = h * dpr;
+  drawCtx.scale(dpr, dpr);
+  // Restore gambar lama
+  drawCtx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, w, h);
+}
+window.addEventListener('resize', resizeCanvases);
+
+// ==========================================
+// HAND LANDMARK VISUALIZATION
+// ==========================================
+function drawHandLandmarks(ctx, results) {
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
+  const lm = results.multiHandLandmarks[0];
+  const w = state.canvasW;
+  const h = state.canvasH;
+
+  // Koneksi antar titik tangan
+  const connections = [
+    [0,1],[1,2],[2,3],[3,4],
+    [0,5],[5,6],[6,7],[7,8],
+    [5,9],[9,10],[10,11],[11,12],
+    [9,13],[13,14],[14,15],[15,16],
+    [13,17],[17,18],[18,19],[19,20],[0,17]
+  ];
+
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,240,255,0.25)';
+  ctx.lineWidth = 1.5;
+  for (const [a, b] of connections) {
+    const ax = (1 - lm[a].x) * w, ay = lm[a].y * h;
+    const bx = (1 - lm[b].x) * w, by = lm[b].y * h;
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+  }
+
+  // Titik landmarks
+  for (let i = 0; i < lm.length; i++) {
+    const x = (1 - lm[i].x) * w;
+    const y = lm[i].y * h;
+    const r = (i === 8) ? 5 : 2.5;
+    ctx.fillStyle = (i === 8) ? '#00f0ff' : 'rgba(0,240,255,0.5)';
+    ctx.shadowBlur = (i === 8) ? 12 : 0;
+    ctx.shadowColor = '#00f0ff';
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+
+  // Cursor ring di index finger tip
+  const tipX = (1 - lm[8].x) * w;
+  const tipY = lm[8].y * h;
+  ctx.save();
+  ctx.strokeStyle = state.isDrawing ? getCurrentColor() : 'rgba(0,240,255,0.6)';
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = state.isDrawing ? getCurrentColor() : '#00f0ff';
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, state.brushSize * 2 + 8, 0, Math.PI * 2);
+  ctx.stroke();
+  // Inner dot
+  ctx.fillStyle = '#ffffff';
+  ctx.globalAlpha = 0.8;
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ==========================================
+// RENDER LOOP
+// ==========================================
+let lastFrameTime = performance.now();
+let frameCount = 0;
+let fpsUpdateTime = 0;
+
+function render(now) {
+  requestAnimationFrame(render);
+
+  // FPS calculation
+  frameCount++;
+  if (now - fpsUpdateTime >= 500) {
+    state.fps = Math.round(frameCount / ((now - fpsUpdateTime) / 1000));
+    fpsVal.textContent = state.fps;
+    frameCount = 0;
+    fpsUpdateTime = now;
+  }
+
+  const w = state.canvasW;
+  const h = state.canvasH;
+
+  // Clear atau trail
+  if (state.trailMode) {
+    displayCtx.fillStyle = state.isDark ? 'rgba(7,7,13,0.04)' : 'rgba(238,240,246,0.06)';
+    displayCtx.fillRect(0, 0, w, h);
+  } else {
+    displayCtx.clearRect(0, 0, w, h);
+  }
+
+  // Camera feed background (mirrored, semi-transparent)
+  if (state.showCamera && video.readyState >= 2) {
+    displayCtx.save();
+    displayCtx.globalAlpha = 0.25;
+    displayCtx.translate(w, 0);
+    displayCtx.scale(-1, 1);
+    displayCtx.drawImage(video, 0, 0, w, h);
+    displayCtx.restore();
+  }
+
+  // Bloom/glow pass untuk drawCanvas
+  const isHighEnd = navigator.hardwareConcurrency >= 4;
+  if (isHighEnd) {
+    displayCtx.save();
+    displayCtx.globalCompositeOperation = 'lighter';
+    displayCtx.globalAlpha = 0.15;
+    displayCtx.filter = 'blur(6px)';
+    displayCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, state.panOffset.x, state.panOffset.y, w, h);
+    displayCtx.restore();
+  }
+
+  // Drawing canvas utama
+  displayCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, state.panOffset.x, state.panOffset.y, w, h);
+
+  // Partikel
+  updateParticles();
+  drawParticles(displayCtx);
+
+  // Hand landmarks
+  if (state.latestResults) {
+    drawHandLandmarks(displayCtx, state.latestResults);
+  }
+
+  // Process hand data
+  processHandData();
+}
+
+// ==========================================
+// HAND DATA PROCESSING
+// ==========================================
+function processHandData() {
+  const results = state.latestResults;
+  if (!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    state.handDetected = false;
+    if (state.isDrawing) endStroke();
+    state.currentGesture = 'none';
+    return;
+  }
+
+  state.handDetected = true;
+  const lm = results.multiHandLandmarks[0];
+  const w = state.canvasW;
+  const h = state.canvasH;
+
+  // Posisi index finger tip di layar (mirrored)
+  const rawX = (1 - lm[8].x) * w;
+  const rawY = lm[8].y * h;
+
+  // Deteksi gesture
+  const gesture = detectGesture(lm);
+  state.prevGesture = state.currentGesture;
+  state.currentGesture = gesture;
+
+  // Aksi gesture
+  switch (gesture) {
+    case 'point':
+      if (!state.isPaused) {
+        if (!state.isDrawing) {
+          state.isDrawing = true;
+          state.smoothPos = { x: rawX - state.panOffset.x, y: rawY - state.panOffset.y };
+          state.currentStroke = [];
+          sound.draw();
+        }
+        addDrawPoint(rawX, rawY);
+      }
+      break;
+
+    case 'open':
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      if (canTriggerGesture('clear')) {
+        clearDrawing();
+        sound.clear();
+        showGestureBadge('Canvas Cleared');
+      }
+      break;
+
+    case 'pinch':
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      if (!state.pinchStart) {
+        state.pinchStart = { x: rawX - state.panOffset.x, y: rawY - state.panOffset.y, px: rawX, py: rawY };
+      } else {
+        state.panOffset.x = rawX - state.pinchStart.px;
+        state.panOffset.y = rawY - state.pinchStart.py;
+      }
+      break;
+
+    case 'fist':
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      if (!state.isPaused && canTriggerGesture('pause')) {
+        state.isPaused = true;
+        sound.pause();
+        showGestureBadge('Paused');
+      }
+      break;
+
+    case 'peace':
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      if (canTriggerGesture('color')) {
+        state.colorIndex = (state.colorIndex + 1) % CFG.colors.length;
+        sound.color();
+        showGestureBadge('Color: ' + CFG.colors[state.colorIndex]);
+      }
+      break;
+
+    case 'thumbs_up':
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      if (canTriggerGesture('save')) {
+        triggerSave();
+      }
+      break;
+
+    default:
+      if (state.isDrawing) endStroke();
+      state.isDrawing = false;
+      state.isPaused = false;
+      break;
+  }
+
+  // Reset pinch start kalau gesture berubah
+  if (gesture !== 'pinch') {
+    state.pinchStart = null;
+  }
+  // Reset pause kalau gesture berubah dari fist
+  if (gesture !== 'fist') {
+    state.isPaused = false;
+  }
+
+  // Update badge
+  if (gestureLabels[gesture]) {
+    gestureBadge.textContent = gestureLabels[gesture];
+    gestureBadge.classList.add('show');
+    clearTimeout(gestureBadge._hideTimer);
+    gestureBadge._hideTimer = setTimeout(() => {
+      if (gesture === state.currentGesture) gestureBadge.classList.remove('show');
+    }, 800);
+  }
+}
+
+// ==========================================
+// SAVE & RECORD
+// ==========================================
+function triggerSave() {
+  sound.save();
+  showGestureBadge('Saving...');
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = state.canvasW;
+  tempCanvas.height = state.canvasH;
+  const tempCtx = tempCanvas.getContext('2d');
+
+  // Background gelap
+  tempCtx.fillStyle = state.isDark ? '#07070d' : '#eef0f6';
+  tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+  // Gambar hasil
+  tempCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
+
+  tempCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    previewImg.src = url;
+    previewModal.style.display = 'flex';
+    previewModal._blob = blob;
+  }, 'image/png');
+}
+
+let mediaRecorder = null;
+let recordedChunks = [];
+
+function toggleRecording() {
+  if (state.isRecording) {
+    mediaRecorder.stop();
+    state.isRecording = false;
+    recIndicator.style.display = 'none';
+    $('btnRecord').classList.remove('active');
+    showGestureBadge('Recording Stopped');
+  } else {
+    try {
+      const stream = displayCanvas.captureStream(30);
+      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+      recordedChunks = [];
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = 'zyechs-airdraw-' + Date.now() + '.webm';
+        a.click(); URL.revokeObjectURL(url);
+        showGestureBadge('Video Downloaded');
+      };
+      mediaRecorder.start();
+      state.isRecording = true;
+      recIndicator.style.display = 'flex';
+      $('btnRecord').classList.add('active');
+      sound.gesture();
+      showGestureBadge('Recording...');
+    } catch (e) {
+      showError('Recording not supported in this browser');
+    }
+  }
+}
+
+// ==========================================
+// MEDIAPIPE SETUP
+// ==========================================
+let handsModel = null;
+
+async function initMediaPipe() {
+  loaderText.textContent = 'Loading hand tracking model...';
+  splashFill.style.width = '40%';
+
+  handsModel = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+  });
+
+  handsModel.setOptions({
+    maxNumHands: CFG.maxHands,
+    modelComplexity: CFG.modelComplexity,
+    minDetectionConfidence: CFG.minDetection,
+    minTrackingConfidence: CFG.minTracking
+  });
+
+  handsModel.onResults(results => {
+    state.latestResults = results;
+  });
+
+  loaderText.textContent = 'Starting camera...';
+  splashFill.style.width = '70%';
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+    });
+    video.srcObject = stream;
+    await video.play();
+
+    splashFill.style.width = '90%';
+    loaderText.textContent = 'Calibrating...';
+
+    // Mulai loop kirim frame ke MediaPipe
+    async function sendFrame() {
+      if (video.readyState >= 2) {
+        await handsModel.send({ image: video });
+      }
+      requestAnimationFrame(sendFrame);
+    }
+    sendFrame();
+
+    // Tunggu sebentar untuk kalibrasi
+    await new Promise(r => setTimeout(r, 1500));
+    splashFill.style.width = '100%';
+    await new Promise(r => setTimeout(r, 400));
+
+    // Sembunyikan splash & loader, tampilkan app
+    splash.style.display = 'none';
+    loader.style.display = 'none';
+    controls.classList.add('show');
+
+    // Inisialisasi audio context (perlu user interaction, tapi kita trigger lewat gesture)
+    sound.init();
+
+    // Auto-show tutorial di pertama kali
+    if (!localStorage.getItem('zyechs_tutorial_seen')) {
+      setTimeout(() => {
+        tutorial.style.display = 'flex';
+        localStorage.setItem('zyechs_tutorial_seen', '1');
+      }, 800);
+    }
+
+  } catch (err) {
+    loader.style.display = 'none';
+    splash.style.display = 'none';
+    if (err.name === 'NotAllowedError') {
+      showError('Camera access denied. Please allow camera permission and reload.');
+    } else if (err.name === 'NotFoundError') {
+      showError('No camera found. Please connect a camera and reload.');
+    } else {
+      showError('Failed to start: ' + err.message);
+    }
+  }
+}
+
+// ==========================================
+// EVENT LISTENERS
+// ==========================================
+ $('btnBrush').addEventListener('click', () => {
+  const visible = brushPopup.style.display === 'flex';
+  brushPopup.style.display = visible ? 'none' : 'flex';
+  if (!visible) sound.gesture();
+});
+brushSlider.addEventListener('input', e => {
+  state.brushSize = parseInt(e.target.value);
+  brushVal.textContent = state.brushSize;
+});
+
+ $('btnRainbow').addEventListener('click', () => {
+  state.rainbowMode = !state.rainbowMode;
+  $('btnRainbow').classList.toggle('active', state.rainbowMode);
+  sound.gesture();
+  showGestureBadge(state.rainbowMode ? 'Rainbow On' : 'Rainbow Off');
+});
+
+ $('btnSymmetry').addEventListener('click', () => {
+  state.symmetryMode = !state.symmetryMode;
+  $('btnSymmetry').classList.toggle('active', state.symmetryMode);
+  sound.gesture();
+  showGestureBadge(state.symmetryMode ? 'Mirror On' : 'Mirror Off');
+});
+
+ $('btnTrail').addEventListener('click', () => {
+  state.trailMode = !state.trailMode;
+  $('btnTrail').classList.toggle('active', state.trailMode);
+  sound.gesture();
+  showGestureBadge(state.trailMode ? 'Trail On' : 'Trail Off');
+});
+
+ $('btnCamToggle').addEventListener('click', () => {
+  state.showCamera = !state.showCamera;
+  $('btnCamToggle').classList.toggle('active', state.showCamera);
+  sound.gesture();
+});
+
+ $('btnSave').addEventListener('click', () => { sound.init(); triggerSave(); });
+ $('btnClear').addEventListener('click', () => { clearDrawing(); sound.clear(); showGestureBadge('Canvas Cleared'); });
+ $('btnRecord').addEventListener('click', () => { sound.init(); toggleRecording(); });
+
+ $('btnTheme').addEventListener('click', () => { toggleTheme(); sound.gesture(); });
+ $('btnTutorial').addEventListener('click', () => { tutorial.style.display = tutorial.style.display === 'flex' ? 'none' : 'flex'; });
+ $('tutClose').addEventListener('click', () => { tutorial.style.display = 'none'; });
+tutorial.addEventListener('click', e => { if (e.target === tutorial) tutorial.style.display = 'none'; });
+
+ $('previewClose').addEventListener('click', () => { previewModal.style.display = 'none'; });
+ $('previewDownload').addEventListener('click', () => {
+  const blob = previewModal._blob;
+  if (blob) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'zyechs-airdraw-' + Date.now() + '.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  previewModal.style.display = 'none';
+  showGestureBadge('Image Saved');
+});
+previewModal.addEventListener('click', e => { if (e.target === previewModal) previewModal.style.display = 'none'; });
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.key === 'c' || e.key === 'C') { clearDrawing(); sound.clear(); }
+  if (e.key === 's' || e.key === 'S') { e.preventDefault(); sound.init(); triggerSave(); }
+  if (e.key === 'r' || e.key === 'R') { sound.init(); toggleRecording(); }
+  if (e.key === 'm' || e.key === 'M') { state.symmetryMode = !state.symmetryMode; $('btnSymmetry').classList.toggle('active', state.symmetryMode); }
+  if (e.key === 't' || e.key === 'T') { state.trailMode = !state.trailMode; $('btnTrail').classList.toggle('active', state.trailMode); }
+  if (e.key === 'h' || e.key === 'H') { tutorial.style.display = tutorial.style.display === 'flex' ? 'none' : 'flex'; }
+  if (e.key === 'Escape') { tutorial.style.display = 'none'; previewModal.style.display = 'none'; brushPopup.style.display = 'none'; }
+});
+
+// ==========================================
+// LANDSCAPE CHECK (Mobile)
+// ==========================================
+function checkOrientation() {
+  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+  if (isMobile && window.innerHeight > window.innerWidth) {
+    landscapeWarn.style.display = 'flex';
+  } else {
+    landscapeWarn.style.display = 'none';
+  }
+}
+window.addEventListener('resize', checkOrientation);
+window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 200));
+
+// ==========================================
+// SPLASH SCREEN ANIMATION (GSAP)
+// ==========================================
+async function runSplash() {
+  await new Promise(r => setTimeout(r, 300));
+
+  // Animasi logo
+  gsap.to('.splash-logo', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' });
+  gsap.fromTo('.splash-logo', { y: 30 }, { y: 0, duration: 0.8, ease: 'power3.out' });
+
+  await new Promise(r => setTimeout(r, 400));
+
+  gsap.to('.splash-sub', { opacity: 1, duration: 0.6, ease: 'power2.out' });
+  gsap.fromTo('.splash-sub', { letterSpacing: '0.8em' }, { letterSpacing: '0.3em', duration: 1.2, ease: 'power2.out' });
+
+  await new Promise(r => setTimeout(r, 300));
+
+  gsap.to('.splash-tag', { opacity: 1, duration: 0.5, ease: 'power2.out' });
+  gsap.to('.splash-bar', { opacity: 1, duration: 0.4, ease: 'power2.out' });
+
+  // Animasi loading bar
+  gsap.to('#splashFill', { width: '20%', duration: 0.6, ease: 'power1.inOut' });
+
+  await new Promise(r => setTimeout(r, 700));
+  // Lanjut ke init MediaPipe (loading bar dikelola di sana)
+}
+
+// ==========================================
+// INISIALISASI APLIKASI
+// ==========================================
+async function init() {
+  resizeCanvases();
+  checkOrientation();
+
+  // Mulai render loop dulu (kosong)
+  fpsUpdateTime = performance.now();
+  requestAnimationFrame(render);
+
+  // Jalankan splash screen
+  await runSplash();
+
+  // Tampilkan loader, sembunyikan splash
+  loader.style.display = 'flex';
+
+  // Init MediaPipe + kamera
+  await initMediaPipe();
+}
+
+// Mulai!
+init();
+</script>
+</body>
+</html>
