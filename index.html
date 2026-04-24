@@ -1,1086 +1,1515 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Zyechs AirDraw Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/remixicon@4.1.0/fonts/remixicon.css" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script>
+tailwind.config={theme:{extend:{fontFamily:{display:['Orbitron','sans-serif'],body:['Space Grotesk','sans-serif']}}}}
+</script>
 <style>
+/* ========== CSS VARIABLES & THEME ========== */
 :root {
-  --bg:#07070d;--fg:#e4e4ec;--muted:#5a5a72;
-  --accent:#00f0ff;--accent2:#ff2d75;--accent3:#00ff88;
-  --card:rgba(12,12,22,0.72);--glass:rgba(18,18,35,0.55);
-  --border:rgba(0,240,255,0.12);--glow:0 0 20px rgba(0,240,255,0.25);
+    --bg: #06060E;
+    --bg-alt: #0A0A18;
+    --glass: rgba(8, 8, 20, 0.7);
+    --glass-border: rgba(0, 240, 255, 0.1);
+    --neon: #00F0FF;
+    --neon-rgb: 0, 240, 255;
+    --neon-pink: #FF0055;
+    --neon-green: #00FF88;
+    --neon-yellow: #FFE600;
+    --neon-orange: #FF6B00;
+    --neon-purple: #A855F7;
+    --text: #E8E8F0;
+    --text-muted: #5A5A70;
+    --canvas-bg: #08080F;
 }
-.light-mode {
-  --bg:#eef0f6;--fg:#111128;--muted:#6b6b88;
-  --accent:#0099aa;--accent2:#cc1155;--accent3:#00aa55;
-  --card:rgba(255,255,255,0.72);--glass:rgba(255,255,255,0.55);
-  --border:rgba(0,153,170,0.18);--glow:0 0 15px rgba(0,153,170,0.15);
+[data-theme="light"] {
+    --bg: #EAEAF0;
+    --bg-alt: #DDDDF0;
+    --glass: rgba(255,255,255,0.65);
+    --glass-border: rgba(0,140,160,0.18);
+    --neon: #0099AA;
+    --neon-rgb: 0,153,170;
+    --neon-pink: #CC0044;
+    --neon-green: #00AA55;
+    --neon-yellow: #BBA000;
+    --neon-orange: #DD5500;
+    --neon-purple: #8833CC;
+    --text: #1A1A2E;
+    --text-muted: #7A7A90;
+    --canvas-bg: #08080F;
 }
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:'Rajdhani',sans-serif;background:var(--bg);color:var(--fg);overflow:hidden;height:100vh;width:100vw}
-.font-display{font-family:'Orbitron',sans-serif}
-canvas{position:fixed;top:0;left:0;width:100%;height:100%}
-#camVideo{display:none}
 
-/* Grid background */
-.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:1;
-  background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);
-  background-size:60px 60px;opacity:.5}
+/* ========== BASE RESET ========== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); overflow: hidden; height: 100vh; width: 100vw; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 2px; }
 
-/* Splash Screen */
-#splash{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-.splash-logo{font-family:'Orbitron',sans-serif;font-size:clamp(2rem,6vw,4.5rem);font-weight:900;
-  background:linear-gradient(135deg,var(--accent),var(--accent2),var(--accent3));
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;opacity:0}
-.splash-sub{font-family:'Orbitron',sans-serif;font-size:clamp(.9rem,2.5vw,1.6rem);font-weight:400;color:var(--accent);letter-spacing:.3em;opacity:0}
-.splash-tag{font-size:clamp(.75rem,1.8vw,1rem);color:var(--muted);letter-spacing:.15em;opacity:0;margin-top:12px}
-.splash-bar{width:180px;height:2px;background:var(--border);border-radius:2px;margin-top:30px;overflow:hidden;opacity:0}
-.splash-bar-fill{width:0%;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px}
+/* ========== SPLASH SCREEN ========== */
+#splash {
+    position: fixed; inset: 0; z-index: 9999;
+    background: #050510;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+}
+#splash .logo-main {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    font-weight: 900;
+    letter-spacing: 0.15em;
+    color: #fff;
+    display: flex; gap: 2px;
+}
+#splash .logo-main .letter {
+    display: inline-block;
+    text-shadow: 0 0 30px rgba(var(--neon-rgb), 0.6), 0 0 60px rgba(var(--neon-rgb), 0.3);
+}
+#splash .logo-sub {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(0.9rem, 2.5vw, 1.3rem);
+    font-weight: 500;
+    letter-spacing: 0.5em;
+    color: var(--neon);
+    margin-top: 4px;
+    display: flex; gap: 1px;
+    opacity: 0.8;
+}
+#splash .tagline {
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: var(--text-muted);
+    margin-top: 24px;
+    font-weight: 300;
+}
+#splash .loader-wrap {
+    margin-top: 40px; width: min(300px, 70vw);
+    height: 3px; background: rgba(255,255,255,0.08);
+    border-radius: 2px; overflow: hidden;
+}
+#splash .loader-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--neon), var(--neon-green));
+    border-radius: 2px;
+    box-shadow: 0 0 12px rgba(var(--neon-rgb), 0.6);
+}
+#splash .loader-text {
+    margin-top: 12px; font-size: 0.75rem;
+    color: var(--text-muted); letter-spacing: 0.1em;
+}
 
-/* Loader */
-#loader{position:fixed;inset:0;z-index:9998;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px}
-.loader-ring{width:60px;height:60px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite}
-.loader-text{font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--accent);letter-spacing:.15em}
-@keyframes spin{to{transform:rotate(360deg)}}
+/* ========== MAIN APP ========== */
+#app {
+    position: fixed; inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 20%, rgba(var(--neon-rgb), 0.025) 0%, transparent 60%),
+        radial-gradient(ellipse at 70% 80%, rgba(255,0,85,0.015) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-alt) 100%);
+    display: none;
+}
+.grid-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 1;
+    background-image:
+        linear-gradient(rgba(var(--neon-rgb), 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(var(--neon-rgb), 0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+}
 
-/* Landscape warning */
-#landscapeWarn{position:fixed;inset:0;z-index:9997;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px}
-.rotate-icon{font-size:3rem;color:var(--accent);animation:rotateAnim 2s ease-in-out infinite}
-@keyframes rotateAnim{0%,100%{transform:rotate(0deg)}50%{transform:rotate(90deg)}}
+/* Canvas layers */
+#draw-canvas, #overlay-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    z-index: 2;
+}
+#draw-canvas { z-index: 2; }
+#overlay-canvas { z-index: 3; pointer-events: none; }
 
-/* Gesture indicator */
-#gestureBadge{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:100;
-  padding:8px 24px;border-radius:40px;background:var(--glass);backdrop-filter:blur(16px);
-  border:1px solid var(--border);font-family:'Orbitron',sans-serif;font-size:.8rem;
-  letter-spacing:.1em;color:var(--accent);opacity:0;transition:opacity .3s;pointer-events:none}
-#gestureBadge.show{opacity:1}
+/* Camera preview */
+#cam-preview {
+    position: fixed; bottom: 20px; right: 20px;
+    width: 180px; height: 135px;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid var(--glass-border);
+    background: #000; z-index: 50;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+#cam-preview video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
 
-/* FPS */
-#fpsCounter{position:fixed;top:20px;right:20px;z-index:100;padding:4px 12px;border-radius:20px;
-  background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--border);
-  font-family:'Orbitron',sans-serif;font-size:.65rem;color:var(--accent3);letter-spacing:.05em}
+/* ========== STATUS BAR ========== */
+#status-bar {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 44px; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px;
+    background: var(--glass);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.75rem; letter-spacing: 0.05em;
+}
+#status-bar .brand {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700; font-size: 0.7rem;
+    color: var(--neon);
+    text-shadow: 0 0 10px rgba(var(--neon-rgb), 0.4);
+}
+#status-bar .info { display: flex; gap: 16px; align-items: center; color: var(--text-muted); }
+#status-bar .info .val { color: var(--text); font-weight: 600; }
+.rec-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #FF0033; display: none;
+    animation: recPulse 1s infinite;
+}
+.rec-dot.active { display: inline-block; }
+@keyframes recPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* Control Panel */
-#controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:100;
-  display:flex;align-items:center;gap:6px;padding:10px 16px;border-radius:20px;
-  background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--border);
-  box-shadow:var(--glow);opacity:0;transition:opacity .5s}
-#controls.show{opacity:1}
-.ctrl-btn{width:42px;height:42px;border-radius:12px;border:1px solid var(--border);
-  background:rgba(0,240,255,0.04);color:var(--fg);display:flex;align-items:center;justify-content:center;
-  cursor:pointer;transition:all .25s;font-size:1.1rem;position:relative}
-.ctrl-btn:hover{background:rgba(0,240,255,0.12);border-color:var(--accent);color:var(--accent);box-shadow:var(--glow)}
-.ctrl-btn.active{background:rgba(0,240,255,0.15);border-color:var(--accent);color:var(--accent)}
-.ctrl-sep{width:1px;height:28px;background:var(--border);margin:0 4px}
-.ctrl-label{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);
-  font-size:.55rem;color:var(--muted);white-space:nowrap;letter-spacing:.05em;font-family:'Rajdhani',sans-serif}
+/* ========== CONTROL PANEL ========== */
+#ctrl-panel {
+    position: fixed; left: 16px; top: 50%; transform: translateY(-50%);
+    z-index: 100;
+    background: var(--glass);
+    backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    border-radius: 18px;
+    padding: 14px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    transition: opacity 0.3s;
+}
+.ctrl-divider {
+    width: 70%; height: 1px;
+    background: var(--glass-border);
+    margin: 4px 0;
+}
+.ctrl-btn {
+    width: 40px; height: 40px;
+    border-radius: 12px; border: none;
+    background: transparent; color: var(--text-muted);
+    font-size: 0.95rem; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    position: relative;
+}
+.ctrl-btn:hover { color: var(--neon); background: rgba(var(--neon-rgb), 0.08); }
+.ctrl-btn.active { color: var(--neon); background: rgba(var(--neon-rgb), 0.12); box-shadow: 0 0 12px rgba(var(--neon-rgb), 0.15); }
+.ctrl-btn .tooltip {
+    position: absolute; left: 54px; top: 50%; transform: translateY(-50%);
+    background: var(--glass); backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    padding: 5px 10px; border-radius: 8px;
+    font-size: 0.7rem; white-space: nowrap;
+    color: var(--text); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s;
+}
+.ctrl-btn:hover .tooltip { opacity: 1; }
+
+/* Color swatches */
+.color-swatch {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid transparent; cursor: pointer;
+    transition: all 0.2s; flex-shrink: 0;
+}
+.color-swatch:hover { transform: scale(1.15); }
+.color-swatch.active { border-color: #fff; box-shadow: 0 0 8px currentColor; }
+.color-swatch.rainbow {
+    background: conic-gradient(#FF0055, #FFE600, #00FF88, #00F0FF, #A855F7, #FF0055);
+}
 
 /* Brush size indicator */
-#brushSizePopup{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:101;
-  padding:8px 16px;border-radius:14px;background:var(--glass);backdrop-filter:blur(16px);
-  border:1px solid var(--border);display:none;align-items:center;gap:12px}
-#brushSlider{-webkit-appearance:none;width:120px;height:4px;border-radius:2px;background:var(--border);outline:none}
-#brushSlider::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:var(--glow)}
+#brush-size-display {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.55rem; color: var(--neon);
+    text-align: center; width: 100%;
+}
 
-/* Tutorial Overlay */
-#tutorial{position:fixed;inset:0;z-index:500;background:rgba(7,7,13,0.92);backdrop-filter:blur(20px);
-  display:none;align-items:center;justify-content:center;padding:20px}
-.tut-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;max-width:700px;width:100%}
-.tut-card{padding:20px 12px;border-radius:16px;background:var(--card);border:1px solid var(--border);
-  text-align:center;transition:all .3s}
-.tut-card:hover{border-color:var(--accent);box-shadow:var(--glow);transform:translateY(-4px)}
-.tut-icon{font-size:2.2rem;margin-bottom:8px;display:block}
-.tut-name{font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--accent);letter-spacing:.08em;margin-bottom:4px}
-.tut-desc{font-size:.8rem;color:var(--muted);line-height:1.3}
-.tut-close{position:absolute;top:20px;right:20px;width:40px;height:40px;border-radius:50%;
-  border:1px solid var(--border);background:var(--card);color:var(--fg);cursor:pointer;
-  display:flex;align-items:center;justify-content:center;font-size:1.2rem;transition:all .3s}
-.tut-close:hover{border-color:var(--accent2);color:var(--accent2)}
-.tut-title{position:absolute;top:24px;left:50%;transform:translateX(-50%);
-  font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--accent);letter-spacing:.15em}
+/* ========== GESTURE INDICATOR ========== */
+#gesture-indicator {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    z-index: 100;
+    background: var(--glass);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+    border-radius: 50px;
+    padding: 8px 24px;
+    font-size: 0.8rem; font-weight: 500;
+    display: flex; align-items: center; gap: 10px;
+    transition: all 0.3s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+#gesture-indicator .gesture-icon { font-size: 1.1rem; }
+#gesture-indicator .gesture-name { color: var(--neon); font-weight: 700; }
 
-/* Preview Modal */
-#previewModal{position:fixed;inset:0;z-index:600;background:rgba(7,7,13,0.92);backdrop-filter:blur(20px);
-  display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px;padding:20px}
-#previewModal img{max-width:85vw;max-height:65vh;border-radius:12px;border:1px solid var(--border);box-shadow:var(--glow)}
-.modal-btns{display:flex;gap:10px}
-.modal-btn{padding:10px 28px;border-radius:12px;border:1px solid var(--border);background:var(--card);
-  color:var(--fg);cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:.95rem;font-weight:600;
-  letter-spacing:.05em;transition:all .25s}
-.modal-btn:hover{border-color:var(--accent);color:var(--accent)}
-.modal-btn.primary{background:rgba(0,240,255,0.12);border-color:var(--accent);color:var(--accent)}
+/* ========== TUTORIAL OVERLAY ========== */
+#tutorial {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(5,5,16,0.92);
+    backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+}
+#tutorial.show { display: flex; }
+.tutorial-card {
+    background: var(--glass);
+    backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 40px;
+    max-width: 560px; width: 90%;
+    box-shadow: 0 0 60px rgba(var(--neon-rgb), 0.08);
+}
+.tutorial-card h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.2rem; font-weight: 700;
+    color: var(--neon); margin-bottom: 24px;
+    text-shadow: 0 0 15px rgba(var(--neon-rgb), 0.3);
+}
+.gesture-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(var(--neon-rgb), 0.06);
+}
+.gesture-row:last-child { border-bottom: none; }
+.gesture-emoji { font-size: 1.8rem; width: 44px; text-align: center; flex-shrink: 0; }
+.gesture-info { flex: 1; }
+.gesture-info .name { font-weight: 600; font-size: 0.9rem; }
+.gesture-info .desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.tutorial-close {
+    margin-top: 28px; width: 100%;
+    padding: 12px; border-radius: 12px;
+    background: rgba(var(--neon-rgb), 0.12);
+    border: 1px solid rgba(var(--neon-rgb), 0.25);
+    color: var(--neon); font-family: 'Orbitron', sans-serif;
+    font-size: 0.8rem; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.1em;
+    transition: all 0.2s;
+}
+.tutorial-close:hover { background: rgba(var(--neon-rgb), 0.2); }
 
-/* Error toast */
-#errorToast{position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:9000;
-  padding:12px 24px;border-radius:14px;background:rgba(255,45,117,0.15);border:1px solid rgba(255,45,117,0.3);
-  color:var(--accent2);font-size:.85rem;display:none;backdrop-filter:blur(12px);text-align:center;max-width:90vw}
+/* ========== SCREENSHOT MODAL ========== */
+#screenshot-modal {
+    position: fixed; inset: 0; z-index: 200;
+    background: rgba(5,5,16,0.9);
+    backdrop-filter: blur(8px);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px;
+}
+#screenshot-modal.show { display: flex; }
+#screenshot-modal img {
+    max-width: 85vw; max-height: 60vh;
+    border-radius: 16px;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 0 40px rgba(var(--neon-rgb), 0.1);
+}
+.modal-actions { display: flex; gap: 12px; }
+.modal-btn {
+    padding: 10px 28px; border-radius: 12px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.08em;
+    transition: all 0.2s; border: 1px solid;
+}
+.modal-btn.primary {
+    background: rgba(var(--neon-rgb), 0.15);
+    border-color: rgba(var(--neon-rgb), 0.3);
+    color: var(--neon);
+}
+.modal-btn.primary:hover { background: rgba(var(--neon-rgb), 0.25); }
+.modal-btn.secondary {
+    background: transparent;
+    border-color: var(--glass-border);
+    color: var(--text-muted);
+}
+.modal-btn.secondary:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 
-/* Status dot */
-.status-dot{width:8px;height:8px;border-radius:50%;background:var(--accent3);display:inline-block;
-  animation:pulse 2s ease-in-out infinite;margin-right:6px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+/* ========== TOAST ========== */
+#toast-container {
+    position: fixed; top: 56px; right: 20px;
+    z-index: 300; display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+    background: var(--glass);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 0.78rem; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    transform: translateX(120%);
+}
+.toast .toast-icon { color: var(--neon); }
 
-/* Recording indicator */
-#recIndicator{position:fixed;top:20px;left:20px;z-index:100;display:none;align-items:center;gap:8px;
-  padding:6px 14px;border-radius:20px;background:rgba(255,45,117,0.15);border:1px solid rgba(255,45,117,0.3)}
-.rec-dot{width:10px;height:10px;border-radius:50%;background:var(--accent2);animation:pulse 1s ease-in-out infinite}
+/* ========== ERROR OVERLAY ========== */
+#error-overlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: #050510;
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px;
+    color: #FF4466; text-align: center; padding: 40px;
+}
+#error-overlay.show { display: flex; }
+#error-overlay i { font-size: 3rem; }
+#error-overlay .msg { font-size: 1rem; color: #ccc; max-width: 400px; line-height: 1.6; }
 
-@media(max-width:640px){
-  .tut-grid{grid-template-columns:repeat(2,1fr);gap:10px}
-  .ctrl-btn{width:36px;height:36px;font-size:.95rem}
-  #controls{padding:8px 10px;gap:4px;bottom:12px}
-  .ctrl-label{display:none}
+/* ========== LANDSCAPE WARNING (MOBILE) ========== */
+#landscape-warn {
+    position: fixed; inset: 0; z-index: 9997;
+    background: #050510;
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 16px; color: var(--text-muted);
+    font-size: 0.9rem; text-align: center; padding: 40px;
+}
+#landscape-warn i { font-size: 2.5rem; color: var(--neon); }
+@media (max-width: 768px) and (orientation: portrait) {
+    #landscape-warn { display: flex; }
+}
+@media (max-width: 768px) {
+    #ctrl-panel { left: 8px; padding: 10px 6px; gap: 4px; }
+    .ctrl-btn { width: 34px; height: 34px; font-size: 0.8rem; }
+    .color-swatch { width: 18px; height: 18px; }
+    #cam-preview { width: 120px; height: 90px; bottom: 12px; right: 12px; }
+    #gesture-indicator { bottom: 12px; padding: 6px 16px; font-size: 0.7rem; }
+}
+
+/* ========== REDUCED MOTION ========== */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 </style>
 </head>
 <body>
 
-<!-- SPLASH SCREEN -->
+<!-- ========== SPLASH SCREEN ========== -->
 <div id="splash">
-  <div class="splash-logo">ZYECHS</div>
-  <div class="splash-sub">AIRDRAW PRO</div>
-  <div class="splash-tag">Draw in the Air, Like a Wizard!!</div>
-  <div class="splash-bar"><div class="splash-bar-fill" id="splashFill"></div></div>
+    <div class="logo-main" id="logo-main"></div>
+    <div class="logo-sub" id="logo-sub"></div>
+    <p class="tagline" id="splash-tagline">Draw in the Air, Like a Wizard 🤏</p>
+    <div class="loader-wrap"><div class="loader-fill" id="loader-fill"></div></div>
+    <p class="loader-text" id="loader-text">Initializing hand tracking engine...</p>
 </div>
 
-<!-- LOADER -->
-<div id="loader">
-  <div class="loader-ring"></div>
-  <div class="loader-text" id="loaderText">Initializing camera...</div>
+<!-- ========== ERROR OVERLAY ========== -->
+<div id="error-overlay">
+    <i class="fas fa-exclamation-triangle"></i>
+    <p class="msg" id="error-msg"></p>
 </div>
 
-<!-- LANDSCAPE WARNING -->
-<div id="landscapeWarn">
-  <i class="ri-smartphone-line rotate-icon"></i>
-  <div style="font-family:'Orbitron',sans-serif;font-size:.85rem;color:var(--accent);letter-spacing:.1em">ROTATE TO LANDSCAPE</div>
-  <div style="font-size:.8rem;color:var(--muted)">Landscape mode required for AirDraw</div>
+<!-- ========== LANDSCAPE WARNING ========== -->
+<div id="landscape-warn">
+    <i class="fas fa-mobile-screen"></i>
+    <p>Please rotate your device to landscape mode</p>
 </div>
 
-<!-- MAIN APP -->
-<video id="camVideo" playsinline></video>
-<canvas id="displayCanvas"></canvas>
-<div class="bg-grid"></div>
+<!-- ========== MAIN APP ========== -->
+<div id="app">
+    <div class="grid-bg"></div>
 
-<!-- Gesture Badge -->
-<div id="gestureBadge"></div>
+    <!-- Hidden video for MediaPipe -->
+    <video id="cam-video" playsinline style="display:none"></video>
 
-<!-- FPS Counter -->
-<div id="fpsCounter"><span class="status-dot"></span><span id="fpsVal">0</span> FPS</div>
+    <!-- Drawing canvas (persistent) -->
+    <canvas id="draw-canvas"></canvas>
+    <!-- Overlay canvas (cleared each frame) -->
+    <canvas id="overlay-canvas"></canvas>
 
-<!-- Recording Indicator -->
-<div id="recIndicator"><div class="rec-dot"></div><span style="font-family:'Orbitron',sans-serif;font-size:.7rem;color:var(--accent2);letter-spacing:.08em">REC</span></div>
+    <!-- Camera preview -->
+    <div id="cam-preview">
+        <video id="preview-video" playsinline muted></video>
+    </div>
 
-<!-- Control Panel -->
-<div id="controls">
-  <button class="ctrl-btn" id="btnBrush" title="Brush Size"><i class="ri-pencil-line"></i><span class="ctrl-label">Brush</span></button>
-  <button class="ctrl-btn active" id="btnRainbow" title="Rainbow Mode"><i class="ri-rainbow-line"></i><span class="ctrl-label">Rainbow</span></button>
-  <button class="ctrl-btn" id="btnSymmetry" title="Symmetry Mode"><i class="ri-layout-column-line"></i><span class="ctrl-label">Mirror</span></button>
-  <button class="ctrl-btn" id="btnTrail" title="Trail Effect"><i class="ri-sparkling-2-line"></i><span class="ctrl-label">Trail</span></button>
-  <div class="ctrl-sep"></div>
-  <button class="ctrl-btn" id="btnCamToggle" title="Toggle Camera BG"><i class="ri-camera-line"></i><span class="ctrl-label">Camera</span></button>
-  <button class="ctrl-btn" id="btnSave" title="Save Image"><i class="ri-download-2-line"></i><span class="ctrl-label">Save</span></button>
-  <button class="ctrl-btn" id="btnRecord" title="Record Video"><i class="ri-vidicon-line"></i><span class="ctrl-label">Record</span></button>
-  <button class="ctrl-btn" id="btnClear" title="Clear Canvas"><i class="ri-delete-bin-line"></i><span class="ctrl-label">Clear</span></button>
-  <div class="ctrl-sep"></div>
-  <button class="ctrl-btn" id="btnTheme" title="Toggle Theme"><i class="ri-moon-line"></i><span class="ctrl-label">Theme</span></button>
-  <button class="ctrl-btn" id="btnTutorial" title="Gesture Guide"><i class="ri-question-line"></i><span class="ctrl-label">Help</span></button>
+    <!-- Status bar -->
+    <header id="status-bar">
+        <div class="brand">ZYECHS AIRDRAW PRO</div>
+        <div class="info">
+            <span><span class="val" id="fps-display">0</span> FPS</span>
+            <span>Gesture: <span class="val" id="gesture-display">--</span></span>
+            <span class="rec-dot" id="rec-dot"></span>
+            <span id="rec-label" style="color:#FF0033;display:none">REC</span>
+        </div>
+    </header>
+
+    <!-- Control panel -->
+    <nav id="ctrl-panel" aria-label="Drawing controls">
+        <!-- Brush size -->
+        <button class="ctrl-btn" id="btn-size-down" aria-label="Decrease brush size"><i class="fas fa-minus"></i><span class="tooltip">Smaller brush</span></button>
+        <div id="brush-size-display">4px</div>
+        <button class="ctrl-btn" id="btn-size-up" aria-label="Increase brush size"><i class="fas fa-plus"></i><span class="tooltip">Bigger brush</span></button>
+        <div class="ctrl-divider"></div>
+        <!-- Colors -->
+        <div class="color-swatch active" data-color="#00F0FF" style="background:#00F0FF;color:#00F0FF" title="Cyan"></div>
+        <div class="color-swatch" data-color="#FF0055" style="background:#FF0055;color:#FF0055" title="Pink"></div>
+        <div class="color-swatch" data-color="#00FF88" style="background:#00FF88;color:#00FF88" title="Green"></div>
+        <div class="color-swatch" data-color="#FFE600" style="background:#FFE600;color:#FFE600" title="Yellow"></div>
+        <div class="color-swatch" data-color="#FF6B00" style="background:#FF6B00;color:#FF6B00" title="Orange"></div>
+        <div class="color-swatch" data-color="#FFFFFF" style="background:#FFFFFF;color:#FFFFFF" title="White"></div>
+        <div class="color-swatch rainbow" data-color="rainbow" title="Rainbow"></div>
+        <div class="ctrl-divider"></div>
+        <!-- Modes -->
+        <button class="ctrl-btn" id="btn-symmetry" aria-label="Symmetry mode"><i class="fas fa-arrows-left-right"></i><span class="tooltip">Symmetry</span></button>
+        <button class="ctrl-btn" id="btn-trail" aria-label="Trail effect"><i class="fas fa-wind"></i><span class="tooltip">Trail</span></button>
+        <div class="ctrl-divider"></div>
+        <!-- Actions -->
+        <button class="ctrl-btn" id="btn-save" aria-label="Save image"><i class="fas fa-camera"></i><span class="tooltip">Save PNG (S)</span></button>
+        <button class="ctrl-btn" id="btn-record" aria-label="Record video"><i class="fas fa-video"></i><span class="tooltip">Record (R)</span></button>
+        <button class="ctrl-btn" id="btn-clear" aria-label="Clear canvas"><i class="fas fa-trash-can"></i><span class="tooltip">Clear (C)</span></button>
+        <div class="ctrl-divider"></div>
+        <button class="ctrl-btn" id="btn-sound" aria-label="Toggle sound"><i class="fas fa-volume-high"></i><span class="tooltip">Sound</span></button>
+        <button class="ctrl-btn" id="btn-theme" aria-label="Toggle theme"><i class="fas fa-moon"></i><span class="tooltip">Theme</span></button>
+        <button class="ctrl-btn" id="btn-tutorial" aria-label="Gesture tutorial"><i class="fas fa-question"></i><span class="tooltip">Tutorial</span></button>
+    </nav>
+
+    <!-- Gesture indicator -->
+    <div id="gesture-indicator">
+        <span class="gesture-icon" id="gest-icon">✋</span>
+        <span>Detected:</span>
+        <span class="gesture-name" id="gest-name">Waiting...</span>
+    </div>
+
+    <!-- Tutorial overlay -->
+    <div id="tutorial" role="dialog" aria-label="Gesture tutorial">
+        <div class="tutorial-card">
+            <h2>GESTURE GUIDE</h2>
+            <div class="gesture-row"><span class="gesture-emoji">☝️</span><div class="gesture-info"><div class="name">Draw</div><div class="desc">Raise index finger only to draw with neon laser</div></div></div>
+            <div class="gesture-row"><span class="gesture-emoji">✋</span><div class="gesture-info"><div class="name">Clear Canvas</div><div class="desc">Open palm to wipe everything clean</div></div></div>
+            <div class="gesture-row"><span class="gesture-emoji">🤏</span><div class="gesture-info"><div class="name">Drag Canvas</div><div class="desc">Pinch and move to pan the drawing</div></div></div>
+            <div class="gesture-row"><span class="gesture-emoji">✊</span><div class="gesture-info"><div class="name">Pause / Resume</div><div class="desc">Fist toggles drawing pause state</div></div></div>
+            <div class="gesture-row"><span class="gesture-emoji">✌️</span><div class="gesture-info"><div class="name">Cycle Color</div><div class="desc">Peace sign switches to next brush color</div></div></div>
+            <button class="tutorial-close" id="tutorial-close">GOT IT</button>
+        </div>
+    </div>
+
+    <!-- Screenshot modal -->
+    <div id="screenshot-modal" role="dialog" aria-label="Screenshot preview">
+        <img id="screenshot-img" src="" alt="Screenshot preview">
+        <div class="modal-actions">
+            <button class="modal-btn primary" id="btn-download">DOWNLOAD PNG</button>
+            <button class="modal-btn secondary" id="btn-cancel-save">CANCEL</button>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container" aria-live="polite"></div>
 </div>
-
-<!-- Brush Size Popup -->
-<div id="brushSizePopup">
-  <span style="font-size:.75rem;color:var(--muted)">Size</span>
-  <input type="range" id="brushSlider" min="1" max="20" value="4">
-  <span id="brushVal" style="font-size:.75rem;color:var(--accent);min-width:20px">4</span>
-</div>
-
-<!-- Tutorial Overlay -->
-<div id="tutorial">
-  <button class="tut-close" id="tutClose"><i class="ri-close-line"></i></button>
-  <div class="tut-title">GESTURE GUIDE</div>
-  <div class="tut-grid">
-    <div class="tut-card"><span class="tut-icon">☝️</span><div class="tut-name">POINT</div><div class="tut-desc">Draw on canvas</div></div>
-    <div class="tut-card"><span class="tut-icon">✋</span><div class="tut-name">OPEN HAND</div><div class="tut-desc">Clear canvas</div></div>
-    <div class="tut-card"><span class="tut-icon">🤏</span><div class="tut-name">PINCH</div><div class="tut-desc">Pan / drag canvas</div></div>
-    <div class="tut-card"><span class="tut-icon">✊</span><div class="tut-name">FIST</div><div class="tut-desc">Pause drawing</div></div>
-    <div class="tut-card"><span class="tut-icon">✌️</span><div class="tut-name">PEACE</div><div class="tut-desc">Change color</div></div>
-    <div class="tut-card"><span class="tut-icon">👍</span><div class="tut-name">THUMBS UP</div><div class="tut-desc">Save image</div></div>
-  </div>
-</div>
-
-<!-- Preview Modal -->
-<div id="previewModal">
-  <img id="previewImg" src="" alt="Preview">
-  <div class="modal-btns">
-    <button class="modal-btn" id="previewClose">Cancel</button>
-    <button class="modal-btn primary" id="previewDownload"><i class="ri-download-2-line"></i> Download PNG</button>
-  </div>
-</div>
-
-<!-- Error Toast -->
-<div id="errorToast"></div>
 
 <script>
-// ==========================================
-// KONFIGURASI & KONSTANTA
-// ==========================================
-const CFG = {
-  maxHands: 1,
-  modelComplexity: 1,
-  minDetection: 0.7,
-  minTracking: 0.5,
-  smoothFactor: 0.45,      // AI smoothing (0=smooth, 1=raw)
-  gestureCooldown: 800,    // ms antar gesture aksi
-  pinchThreshold: 0.06,    // jarak pinch normalisasi
-  maxParticles: 250,
-  colors: ['#00f0ff','#ff2d75','#00ff88','#ffdd00','#ff6b00','#aa44ff','#ff4488','#44ddff'],
-  neonColors: ['#00f0ff','#ff2d75','#00ff88','#ffdd00','#ff6b00','#aa44ff','#ff4488','#44ddff']
+/* ================================================================
+   ZYECHS AIRDRAW PRO — Main Application Script
+   Hand-tracking drawing with neon glow, multi-gesture, symmetry,
+   trail effects, recording, and futuristic UI.
+   ================================================================ */
+
+// ==================== KONFIGURASI ====================
+const CONFIG = {
+    smoothFactor: 0.45,        // Exponential moving average (lower = smoother)
+    interpolateSpacing: 4,      // Min pixels between interpolated points
+    pinchThreshold: 0.065,      // Normalized distance for pinch detection
+    brushMin: 2, brushMax: 24,
+    brushDefault: 4,
+    trailFadeAlpha: 0.012,      // Canvas fade per trail tick
+    trailInterval: 50,          // ms between trail fade ticks
+    gestureDebounce: {
+        clear: 1800,
+        pause: 900,
+        color: 600
+    },
+    neonLayers: [
+        { widthAdd: 18, blur: 35, alpha: 0.08 },
+        { widthAdd: 8, blur: 18, alpha: 0.22 },
+        { widthAdd: 3, blur: 10, alpha: 0.45, white: true },
+        { widthAdd: 0, blur: 5, alpha: 1.0 }
+    ],
+    colors: ['#00F0FF','#FF0055','#00FF88','#FFE600','#FF6B00','#FFFFFF','rainbow']
 };
 
-// ==========================================
-// STATE MANAGEMENT
-// ==========================================
-const state = {
-  isDrawing: false,
-  currentGesture: 'none',
-  prevGesture: 'none',
-  colorIndex: 0,
-  brushSize: 4,
-  rainbowMode: true,
-  symmetryMode: false,
-  trailMode: false,
-  showCamera: true,
-  isDark: true,
-  isRecording: false,
-  isPaused: false,
-  panOffset: { x: 0, y: 0 },
-  pinchStart: null,
-  smoothPos: { x: 0, y: 0 },
-  currentStroke: [],
-  lastGestureTime: {},
-  fps: 0,
-  hue: 0,
-  handDetected: false,
-  latestResults: null,
-  canvasW: 0,
-  canvasH: 0
-};
+// ==================== STATE ====================
+let brushSize = CONFIG.brushDefault;
+let currentColorIndex = 0;
+let rainbowHue = 0;
+let symmetryMode = false;
+let trailMode = false;
+let isPaused = false;
+let soundEnabled = true;
+let isRecording = false;
+let isDarkTheme = true;
 
-// ==========================================
-// ELEMEN DOM
-// ==========================================
-const $ = id => document.getElementById(id);
-const splash = $('splash'), splashFill = $('splashFill');
-const loader = $('loader'), loaderText = $('loaderText');
-const landscapeWarn = $('landscapeWarn');
-const displayCanvas = $('displayCanvas');
-const displayCtx = displayCanvas.getContext('2d');
-const video = $('camVideo');
-const gestureBadge = $('gestureBadge');
-const fpsVal = $('fpsVal');
-const controls = $('controls');
-const brushPopup = $('brushSizePopup');
-const brushSlider = $('brushSlider');
-const brushVal = $('brushVal');
-const tutorial = $('tutorial');
-const previewModal = $('previewModal');
-const previewImg = $('previewImg');
-const errorToast = $('errorToast');
-const recIndicator = $('recIndicator');
+// Drawing state
+let prevDrawPoint = null;
+let smoothedPoint = null;
+let isDragging = false;
+let dragStart = null;
 
-// Offscreen drawing canvas
-const drawCanvas = document.createElement('canvas');
-const drawCtx = drawCanvas.getContext('2d');
+// Gesture debounce timers
+let lastClearTime = 0;
+let lastPauseTime = 0;
+let lastColorTime = 0;
 
-// ==========================================
-// SOUND ENGINE - Web Audio API synth
-// ==========================================
-class SoundEngine {
-  constructor() {
-    this.ctx = null;
-    this.enabled = true;
-  }
-  init() {
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  _play(freq, type, dur, vol) {
-    if (!this.enabled || !this.ctx) return;
-    if (this.ctx.state === 'suspended') this.ctx.resume();
-    const o = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    o.connect(g); g.connect(this.ctx.destination);
-    o.type = type; o.frequency.value = freq;
-    g.gain.setValueAtTime(vol, this.ctx.currentTime);
-    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + dur);
-    o.start(); o.stop(this.ctx.currentTime + dur);
-  }
-  draw()    { this._play(1200, 'sine', 0.06, 0.02); }
-  clear()   { this._play(150, 'sawtooth', 0.4, 0.08); }
-  color()   { this._play(880, 'triangle', 0.15, 0.06); this._play(1100, 'sine', 0.15, 0.04); }
-  save()    { this._play(600, 'square', 0.08, 0.04); this._play(900, 'sine', 0.12, 0.05); }
-  pause()   { this._play(300, 'sine', 0.2, 0.04); }
-  gesture() { this._play(700, 'sine', 0.08, 0.03); }
-}
-const sound = new SoundEngine();
+// Partikel system
+let particles = [];
 
-// ==========================================
-// PARTICLE SYSTEM
-// ==========================================
-const particles = [];
-function emitParticles(x, y, color, count = 3) {
-  for (let i = 0; i < count && particles.length < CFG.maxParticles; i++) {
-    const angle = Math.random() * Math.PI * 2;
-    const speed = Math.random() * 3 + 1;
-    particles.push({
-      x, y,
-      vx: Math.cos(angle) * speed,
-      vy: Math.sin(angle) * speed,
-      life: 1,
-      color,
-      size: Math.random() * 2.5 + 0.8
-    });
-  }
-}
-function updateParticles() {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.x += p.vx; p.y += p.vy;
-    p.vx *= 0.96; p.vy *= 0.96;
-    p.life -= 0.025;
-    if (p.life <= 0) particles.splice(i, 1);
-  }
-}
-function drawParticles(ctx) {
-  for (const p of particles) {
-    ctx.save();
-    ctx.globalAlpha = p.life * 0.8;
-    ctx.fillStyle = p.color;
-    ctx.shadowBlur = 8;
-    ctx.shadowColor = p.color;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, Math.max(0.1, p.size * p.life), 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-}
-
-// ==========================================
-// GESTURE DETECTOR
-// ==========================================
-function dist(a, b) {
-  return Math.hypot(a.x - b.x, a.y - b.y);
-}
-
-function detectGesture(lm) {
-  // Deteksi jari terangkat: tip y < pip y (y menurun = bawah)
-  const palmCenter = {
-    x: (lm[0].x + lm[5].x + lm[17].x) / 3,
-    y: (lm[0].y + lm[5].y + lm[17].y) / 3
-  };
-
-  // Thumb: bandingkan jarak tip dari palm vs IP joint dari palm
-  const thumbExt = dist(lm[4], palmCenter) > dist(lm[3], palmCenter) * 1.15;
-  const indexUp  = lm[8].y  < lm[6].y;
-  const middleUp = lm[12].y < lm[10].y;
-  const ringUp   = lm[16].y < lm[14].y;
-  const pinkyUp  = lm[20].y < lm[18].y;
-
-  const up = [thumbExt, indexUp, middleUp, ringUp, pinkyUp];
-  const count = up.filter(Boolean).length;
-
-  // Pinch: jarak thumb tip & index tip
-  const pinchDist = dist(lm[4], lm[8]);
-
-  // Prioritas gesture
-  if (pinchDist < CFG.pinchThreshold && !middleUp && !ringUp) return 'pinch';
-  if (count === 0) return 'fist';
-  if (thumbExt && !indexUp && !middleUp && !ringUp && !pinkyUp) return 'thumbs_up';
-  if (!thumbExt && indexUp && !middleUp && !ringUp && !pinkyUp) return 'point';
-  if (!thumbExt && indexUp && middleUp && !ringUp && !pinkyUp) return 'peace';
-  if (count >= 4) return 'open';
-
-  return 'unknown';
-}
-
-const gestureLabels = {
-  point: 'Drawing', open: 'Clear', pinch: 'Pan', fist: 'Paused',
-  peace: 'Color Switch', thumbs_up: 'Save', unknown: '', none: ''
-};
-
-function canTriggerGesture(name) {
-  const now = Date.now();
-  if (state.lastGestureTime[name] && now - state.lastGestureTime[name] < CFG.gestureCooldown) return false;
-  state.lastGestureTime[name] = now;
-  return true;
-}
-
-// ==========================================
-// DRAWING ENGINE
-// ==========================================
-function getCurrentColor() {
-  if (state.rainbowMode) {
-    state.hue = (state.hue + 1.5) % 360;
-    return `hsl(${state.hue}, 100%, 60%)`;
-  }
-  return CFG.colors[state.colorIndex % CFG.colors.length];
-}
-
-function drawNeonSegment(ctx, x1, y1, x2, y2, color, size) {
-  ctx.save();
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  // Layer luar (glow besar)
-  ctx.strokeStyle = color;
-  ctx.lineWidth = size * 4;
-  ctx.globalAlpha = 0.08;
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-
-  // Layer mid glow
-  ctx.lineWidth = size * 2;
-  ctx.globalAlpha = 0.2;
-  ctx.shadowBlur = size * 3;
-  ctx.shadowColor = color;
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-
-  // Core stroke
-  ctx.lineWidth = size;
-  ctx.globalAlpha = 0.95;
-  ctx.shadowBlur = size * 2;
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-
-  // White hot center
-  ctx.strokeStyle = '#ffffff';
-  ctx.lineWidth = Math.max(0.5, size * 0.25);
-  ctx.globalAlpha = 0.6;
-  ctx.shadowBlur = 0;
-  ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
-
-  ctx.restore();
-}
-
-function addDrawPoint(rawX, rawY) {
-  // Terapkan pan offset: posisi di drawCanvas = posisi layar - offset
-  const cx = rawX - state.panOffset.x;
-  const cy = rawY - state.panOffset.y;
-
-  // AI smoothing
-  state.smoothPos.x = state.smoothPos.x * CFG.smoothFactor + cx * (1 - CFG.smoothFactor);
-  state.smoothPos.y = state.smoothPos.y * CFG.smoothFactor + cy * (1 - CFG.smoothFactor);
-
-  const sx = state.smoothPos.x;
-  const sy = state.smoothPos.y;
-  const color = getCurrentColor();
-
-  if (state.currentStroke.length > 0) {
-    const prev = state.currentStroke[state.currentStroke.length - 1];
-    // Gambar segmen di drawCanvas
-    drawNeonSegment(drawCtx, prev.x, prev.y, sx, sy, color, state.brushSize);
-
-    // Symmetry mode
-    if (state.symmetryMode) {
-      const mx = drawCanvas.width - sx;
-      const mpx = drawCanvas.width - prev.x;
-      drawNeonSegment(drawCtx, mpx, prev.y, mx, sy, color, state.brushSize);
-    }
-
-    // Partikel
-    emitParticles(rawX, rawY, color, 2);
-  }
-
-  state.currentStroke.push({ x: sx, y: sy });
-}
-
-function endStroke() {
-  state.currentStroke = [];
-}
-
-function clearDrawing() {
-  drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
-  particles.length = 0;
-  state.panOffset = { x: 0, y: 0 };
-}
-
-// ==========================================
-// UI HELPERS
-// ==========================================
-function showError(msg) {
-  errorToast.textContent = msg;
-  errorToast.style.display = 'block';
-  setTimeout(() => errorToast.style.display = 'none', 4000);
-}
-
-function showGestureBadge(text) {
-  gestureBadge.textContent = text;
-  gestureBadge.classList.add('show');
-  clearTimeout(gestureBadge._timer);
-  gestureBadge._timer = setTimeout(() => gestureBadge.classList.remove('show'), 1200);
-}
-
-function toggleTheme() {
-  state.isDark = !state.isDark;
-  document.body.classList.toggle('light-mode', !state.isDark);
-  $('btnTheme').querySelector('i').className = state.isDark ? 'ri-moon-line' : 'ri-sun-line';
-}
-
-// ==========================================
-// CANVAS RESIZE
-// ==========================================
-function resizeCanvases() {
-  const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  state.canvasW = w; state.canvasH = h;
-
-  displayCanvas.width = w * dpr;
-  displayCanvas.height = h * dpr;
-  displayCanvas.style.width = w + 'px';
-  displayCanvas.style.height = h + 'px';
-  displayCtx.scale(dpr, dpr);
-
-  // Simpan isi drawCanvas sebelum resize
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = drawCanvas.width;
-  tempCanvas.height = drawCanvas.height;
-  tempCanvas.getContext('2d').drawImage(drawCanvas, 0, 0);
-
-  drawCanvas.width = w * dpr;
-  drawCanvas.height = h * dpr;
-  drawCtx.scale(dpr, dpr);
-  // Restore gambar lama
-  drawCtx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, w, h);
-}
-window.addEventListener('resize', resizeCanvases);
-
-// ==========================================
-// HAND LANDMARK VISUALIZATION
-// ==========================================
-function drawHandLandmarks(ctx, results) {
-  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) return;
-  const lm = results.multiHandLandmarks[0];
-  const w = state.canvasW;
-  const h = state.canvasH;
-
-  // Koneksi antar titik tangan
-  const connections = [
-    [0,1],[1,2],[2,3],[3,4],
-    [0,5],[5,6],[6,7],[7,8],
-    [5,9],[9,10],[10,11],[11,12],
-    [9,13],[13,14],[14,15],[15,16],
-    [13,17],[17,18],[18,19],[19,20],[0,17]
-  ];
-
-  ctx.save();
-  ctx.strokeStyle = 'rgba(0,240,255,0.25)';
-  ctx.lineWidth = 1.5;
-  for (const [a, b] of connections) {
-    const ax = (1 - lm[a].x) * w, ay = lm[a].y * h;
-    const bx = (1 - lm[b].x) * w, by = lm[b].y * h;
-    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
-  }
-
-  // Titik landmarks
-  for (let i = 0; i < lm.length; i++) {
-    const x = (1 - lm[i].x) * w;
-    const y = lm[i].y * h;
-    const r = (i === 8) ? 5 : 2.5;
-    ctx.fillStyle = (i === 8) ? '#00f0ff' : 'rgba(0,240,255,0.5)';
-    ctx.shadowBlur = (i === 8) ? 12 : 0;
-    ctx.shadowColor = '#00f0ff';
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
-  }
-  ctx.restore();
-
-  // Cursor ring di index finger tip
-  const tipX = (1 - lm[8].x) * w;
-  const tipY = lm[8].y * h;
-  ctx.save();
-  ctx.strokeStyle = state.isDrawing ? getCurrentColor() : 'rgba(0,240,255,0.6)';
-  ctx.lineWidth = 2;
-  ctx.shadowBlur = 15;
-  ctx.shadowColor = state.isDrawing ? getCurrentColor() : '#00f0ff';
-  ctx.beginPath();
-  ctx.arc(tipX, tipY, state.brushSize * 2 + 8, 0, Math.PI * 2);
-  ctx.stroke();
-  // Inner dot
-  ctx.fillStyle = '#ffffff';
-  ctx.globalAlpha = 0.8;
-  ctx.beginPath();
-  ctx.arc(tipX, tipY, 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-// ==========================================
-// RENDER LOOP
-// ==========================================
-let lastFrameTime = performance.now();
+// FPS counter
 let frameCount = 0;
-let fpsUpdateTime = 0;
+let lastFpsTime = performance.now();
+let currentFps = 0;
 
-function render(now) {
-  requestAnimationFrame(render);
-
-  // FPS calculation
-  frameCount++;
-  if (now - fpsUpdateTime >= 500) {
-    state.fps = Math.round(frameCount / ((now - fpsUpdateTime) / 1000));
-    fpsVal.textContent = state.fps;
-    frameCount = 0;
-    fpsUpdateTime = now;
-  }
-
-  const w = state.canvasW;
-  const h = state.canvasH;
-
-  // Clear atau trail
-  if (state.trailMode) {
-    displayCtx.fillStyle = state.isDark ? 'rgba(7,7,13,0.04)' : 'rgba(238,240,246,0.06)';
-    displayCtx.fillRect(0, 0, w, h);
-  } else {
-    displayCtx.clearRect(0, 0, w, h);
-  }
-
-  // Camera feed background (mirrored, semi-transparent)
-  if (state.showCamera && video.readyState >= 2) {
-    displayCtx.save();
-    displayCtx.globalAlpha = 0.25;
-    displayCtx.translate(w, 0);
-    displayCtx.scale(-1, 1);
-    displayCtx.drawImage(video, 0, 0, w, h);
-    displayCtx.restore();
-  }
-
-  // Bloom/glow pass untuk drawCanvas
-  const isHighEnd = navigator.hardwareConcurrency >= 4;
-  if (isHighEnd) {
-    displayCtx.save();
-    displayCtx.globalCompositeOperation = 'lighter';
-    displayCtx.globalAlpha = 0.15;
-    displayCtx.filter = 'blur(6px)';
-    displayCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, state.panOffset.x, state.panOffset.y, w, h);
-    displayCtx.restore();
-  }
-
-  // Drawing canvas utama
-  displayCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, state.panOffset.x, state.panOffset.y, w, h);
-
-  // Partikel
-  updateParticles();
-  drawParticles(displayCtx);
-
-  // Hand landmarks
-  if (state.latestResults) {
-    drawHandLandmarks(displayCtx, state.latestResults);
-  }
-
-  // Process hand data
-  processHandData();
-}
-
-// ==========================================
-// HAND DATA PROCESSING
-// ==========================================
-function processHandData() {
-  const results = state.latestResults;
-  if (!results || !results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
-    state.handDetected = false;
-    if (state.isDrawing) endStroke();
-    state.currentGesture = 'none';
-    return;
-  }
-
-  state.handDetected = true;
-  const lm = results.multiHandLandmarks[0];
-  const w = state.canvasW;
-  const h = state.canvasH;
-
-  // Posisi index finger tip di layar (mirrored)
-  const rawX = (1 - lm[8].x) * w;
-  const rawY = lm[8].y * h;
-
-  // Deteksi gesture
-  const gesture = detectGesture(lm);
-  state.prevGesture = state.currentGesture;
-  state.currentGesture = gesture;
-
-  // Aksi gesture
-  switch (gesture) {
-    case 'point':
-      if (!state.isPaused) {
-        if (!state.isDrawing) {
-          state.isDrawing = true;
-          state.smoothPos = { x: rawX - state.panOffset.x, y: rawY - state.panOffset.y };
-          state.currentStroke = [];
-          sound.draw();
-        }
-        addDrawPoint(rawX, rawY);
-      }
-      break;
-
-    case 'open':
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      if (canTriggerGesture('clear')) {
-        clearDrawing();
-        sound.clear();
-        showGestureBadge('Canvas Cleared');
-      }
-      break;
-
-    case 'pinch':
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      if (!state.pinchStart) {
-        state.pinchStart = { x: rawX - state.panOffset.x, y: rawY - state.panOffset.y, px: rawX, py: rawY };
-      } else {
-        state.panOffset.x = rawX - state.pinchStart.px;
-        state.panOffset.y = rawY - state.pinchStart.py;
-      }
-      break;
-
-    case 'fist':
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      if (!state.isPaused && canTriggerGesture('pause')) {
-        state.isPaused = true;
-        sound.pause();
-        showGestureBadge('Paused');
-      }
-      break;
-
-    case 'peace':
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      if (canTriggerGesture('color')) {
-        state.colorIndex = (state.colorIndex + 1) % CFG.colors.length;
-        sound.color();
-        showGestureBadge('Color: ' + CFG.colors[state.colorIndex]);
-      }
-      break;
-
-    case 'thumbs_up':
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      if (canTriggerGesture('save')) {
-        triggerSave();
-      }
-      break;
-
-    default:
-      if (state.isDrawing) endStroke();
-      state.isDrawing = false;
-      state.isPaused = false;
-      break;
-  }
-
-  // Reset pinch start kalau gesture berubah
-  if (gesture !== 'pinch') {
-    state.pinchStart = null;
-  }
-  // Reset pause kalau gesture berubah dari fist
-  if (gesture !== 'fist') {
-    state.isPaused = false;
-  }
-
-  // Update badge
-  if (gestureLabels[gesture]) {
-    gestureBadge.textContent = gestureLabels[gesture];
-    gestureBadge.classList.add('show');
-    clearTimeout(gestureBadge._hideTimer);
-    gestureBadge._hideTimer = setTimeout(() => {
-      if (gesture === state.currentGesture) gestureBadge.classList.remove('show');
-    }, 800);
-  }
-}
-
-// ==========================================
-// SAVE & RECORD
-// ==========================================
-function triggerSave() {
-  sound.save();
-  showGestureBadge('Saving...');
-
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = state.canvasW;
-  tempCanvas.height = state.canvasH;
-  const tempCtx = tempCanvas.getContext('2d');
-
-  // Background gelap
-  tempCtx.fillStyle = state.isDark ? '#07070d' : '#eef0f6';
-  tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-  // Gambar hasil
-  tempCtx.drawImage(drawCanvas, 0, 0, drawCanvas.width, drawCanvas.height, 0, 0, tempCanvas.width, tempCanvas.height);
-
-  tempCanvas.toBlob(blob => {
-    const url = URL.createObjectURL(blob);
-    previewImg.src = url;
-    previewModal.style.display = 'flex';
-    previewModal._blob = blob;
-  }, 'image/png');
-}
-
+// MediaPipe & Camera
+let handsInstance = null;
+let cameraInstance = null;
 let mediaRecorder = null;
 let recordedChunks = [];
 
-function toggleRecording() {
-  if (state.isRecording) {
-    mediaRecorder.stop();
-    state.isRecording = false;
-    recIndicator.style.display = 'none';
-    $('btnRecord').classList.remove('active');
-    showGestureBadge('Recording Stopped');
-  } else {
+// Trail interval
+let trailIntervalId = null;
+
+// Audio context (dibuat saat user interaction pertama)
+let audioCtx = null;
+
+// ==================== DOM REFERENCES ====================
+const splashEl = document.getElementById('splash');
+const loaderFill = document.getElementById('loader-fill');
+const loaderText = document.getElementById('loader-text');
+const appEl = document.getElementById('app');
+const errorOverlay = document.getElementById('error-overlay');
+const errorMsg = document.getElementById('error-msg');
+const camVideo = document.getElementById('cam-video');
+const previewVideo = document.getElementById('preview-video');
+const drawCanvas = document.getElementById('draw-canvas');
+const overlayCanvas = document.getElementById('overlay-canvas');
+const drawCtx = drawCanvas.getContext('2d');
+const overlayCtx = overlayCanvas.getContext('2d');
+const fpsDisplay = document.getElementById('fps-display');
+const gestureDisplay = document.getElementById('gesture-display');
+const gestIcon = document.getElementById('gest-icon');
+const gestName = document.getElementById('gest-name');
+const brushSizeDisplay = document.getElementById('brush-size-display');
+const recDot = document.getElementById('rec-dot');
+const recLabel = document.getElementById('rec-label');
+const tutorialEl = document.getElementById('tutorial');
+const screenshotModal = document.getElementById('screenshot-modal');
+const screenshotImg = document.getElementById('screenshot-img');
+const toastContainer = document.getElementById('toast-container');
+
+// ==================== AUDIO ENGINE ====================
+function ensureAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playSound(type) {
+    if (!soundEnabled || !audioCtx) return;
     try {
-      const stream = displayCanvas.captureStream(30);
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
-      recordedChunks = [];
-      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
-      mediaRecorder.onstop = () => {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        switch(type) {
+            case 'clear':
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(900, now);
+                osc.frequency.exponentialRampToValueAtTime(180, now + 0.25);
+                gain.gain.setValueAtTime(0.06, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(now); osc.stop(now + 0.25);
+                break;
+            case 'color':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(523, now);
+                osc.frequency.setValueAtTime(659, now + 0.07);
+                osc.frequency.setValueAtTime(784, now + 0.14);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                osc.start(now); osc.stop(now + 0.25);
+                break;
+            case 'pause':
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, now);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+                osc.start(now); osc.stop(now + 0.12);
+                break;
+            case 'pinch':
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1100, now);
+                osc.frequency.exponentialRampToValueAtTime(550, now + 0.08);
+                gain.gain.setValueAtTime(0.04, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+                osc.start(now); osc.stop(now + 0.08);
+                break;
+        }
+    } catch(e) { /* Abaikan error audio */ }
+}
+
+// ==================== TOAST NOTIFICATION ====================
+function showToast(message, icon = 'fa-circle-info') {
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `<i class="fas ${icon} toast-icon"></i><span>${message}</span>`;
+    toastContainer.appendChild(toast);
+    gsap.to(toast, { x: 0, duration: 0.4, ease: 'back.out(1.4)' });
+    setTimeout(() => {
+        gsap.to(toast, {
+            x: 140, opacity: 0, duration: 0.3,
+            onComplete: () => toast.remove()
+        });
+    }, 2200);
+}
+
+// ==================== ERROR HANDLER ====================
+function showError(msg) {
+    errorMsg.textContent = msg;
+    errorOverlay.classList.add('show');
+    gsap.to('#splash', { opacity: 0, duration: 0.5 });
+}
+
+// ==================== CANVAS SETUP ====================
+function resizeCanvases() {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    // Simpan konten lama
+    let imageData = null;
+    if (drawCanvas.width > 0 && drawCanvas.height > 0) {
+        try { imageData = drawCtx.getImageData(0, 0, drawCanvas.width, drawCanvas.height); } catch(e) {}
+    }
+    drawCanvas.width = w;
+    drawCanvas.height = h;
+    overlayCanvas.width = w;
+    overlayCanvas.height = h;
+    // Restore konten
+    if (imageData) {
+        try { drawCtx.putImageData(imageData, 0, 0); } catch(e) {}
+    }
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+// ==================== SMOOTHING & INTERPOLATION ====================
+function dist(a, b) {
+    return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2);
+}
+
+function smoothPoint(raw, prev, factor) {
+    if (!prev) return { x: raw.x, y: raw.y };
+    return {
+        x: prev.x * factor + raw.x * (1 - factor),
+        y: prev.y * factor + raw.y * (1 - factor)
+    };
+}
+
+function interpolatePoints(p1, p2, spacing) {
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (d < spacing) return [p2];
+    const points = [];
+    const steps = Math.ceil(d / spacing);
+    for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        points.push({ x: p1.x + dx * t, y: p1.y + dy * t });
+    }
+    return points;
+}
+
+// ==================== NEON DRAWING ENGINE ====================
+function getCurrentColor() {
+    const c = CONFIG.colors[currentColorIndex];
+    if (c === 'rainbow') {
+        rainbowHue = (rainbowHue + 2) % 360;
+        return `hsl(${rainbowHue}, 100%, 60%)`;
+    }
+    return c;
+}
+
+function drawNeonSegment(ctx, x1, y1, x2, y2, color, width) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.globalCompositeOperation = 'lighter';
+
+    for (const layer of CONFIG.neonLayers) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.strokeStyle = layer.white ? '#ffffff' : color;
+        ctx.lineWidth = Math.max(0.5, width + layer.widthAdd);
+        ctx.shadowColor = color;
+        ctx.shadowBlur = layer.blur;
+        ctx.globalAlpha = layer.alpha;
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+// ==================== PARTICLE SYSTEM ====================
+function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x, y,
+            vx: (Math.random() - 0.5) * 5,
+            vy: (Math.random() - 0.5) * 5,
+            life: 1,
+            decay: 0.025 + Math.random() * 0.035,
+            size: 1 + Math.random() * 3,
+            color
+        });
+    }
+    // Batasi jumlah partikel
+    if (particles.length > 300) particles.splice(0, particles.length - 300);
+}
+
+function updateAndDrawParticles(ctx) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vx *= 0.96;
+        p.vy *= 0.96;
+        p.life -= p.decay;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = p.life * 0.5;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, Math.max(0.5, p.size * p.life), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+// ==================== GESTURE DETECTION ====================
+function detectGesture(landmarks) {
+    // Cek apakah jari extended (tip di atas PIP dalam koordinat screen)
+    const indexUp = landmarks[8].y < landmarks[6].y;
+    const middleUp = landmarks[12].y < landmarks[10].y;
+    const ringUp = landmarks[16].y < landmarks[14].y;
+    const pinkyUp = landmarks[20].y < landmarks[18].y;
+
+    // Thumb: cek jarak tip ke wrist vs IP ke wrist
+    const thumbTipDist = dist(landmarks[4], landmarks[2]);
+    const thumbIpDist = dist(landmarks[3], landmarks[2]);
+    const thumbUp = thumbTipDist > thumbIpDist * 1.1;
+
+    // Pinch: jarak thumb tip ke index tip
+    const pinchDist = dist(landmarks[4], landmarks[8]);
+    const isPinch = pinchDist < CONFIG.pinchThreshold;
+
+    const extendedCount = [thumbUp, indexUp, middleUp, ringUp, pinkyUp].filter(Boolean).length;
+
+    // Prioritas: pinch > open palm > fist > peace > draw
+    if (isPinch) {
+        return { gesture: 'pinch', point: { x: (landmarks[4].x + landmarks[8].x) / 2, y: (landmarks[4].y + landmarks[8].y) / 2 } };
+    }
+    if (extendedCount >= 5) return { gesture: 'open_palm' };
+    if (extendedCount === 0) return { gesture: 'fist' };
+    if (indexUp && middleUp && !ringUp && !pinkyUp) return { gesture: 'peace' };
+    if (indexUp && !middleUp && !ringUp && !pinkyUp) return { gesture: 'draw', point: landmarks[8] };
+
+    return { gesture: 'unknown' };
+}
+
+// Gesture metadata untuk UI
+const GESTURE_META = {
+    draw: { icon: '☝️', name: 'Draw' },
+    open_palm: { icon: '✋', name: 'Clear' },
+    pinch: { icon: '🤏', name: 'Drag' },
+    fist: { icon: '✊', name: 'Pause' },
+    peace: { icon: '✌️', name: 'Color Cycle' },
+    unknown: { icon: '❓', name: 'Waiting...' }
+};
+
+// ==================== CANVAS OPERATIONS ====================
+function clearDrawCanvas() {
+    drawCtx.save();
+    drawCtx.globalCompositeOperation = 'source-over';
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    drawCtx.restore();
+}
+
+function panCanvasContent(dx, dy) {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = drawCanvas.width;
+    tempCanvas.height = drawCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+    tempCtx.drawImage(drawCanvas, 0, 0);
+    drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    drawCtx.drawImage(tempCanvas, dx, dy);
+}
+
+function cycleColor() {
+    currentColorIndex = (currentColorIndex + 1) % CONFIG.colors.length;
+    updateColorSwatchUI();
+    showToast(`Color: ${CONFIG.colors[currentColorIndex] === 'rainbow' ? 'Rainbow' : CONFIG.colors[currentColorIndex]}`, 'fa-palette');
+}
+
+function updateColorSwatchUI() {
+    document.querySelectorAll('.color-swatch').forEach((el, i) => {
+        el.classList.toggle('active', i === currentColorIndex);
+    });
+}
+
+// ==================== TRAIL MODE ====================
+function startTrailMode() {
+    if (trailIntervalId) return;
+    trailIntervalId = setInterval(() => {
+        drawCtx.save();
+        drawCtx.globalCompositeOperation = 'destination-out';
+        drawCtx.fillStyle = `rgba(0, 0, 0, ${CONFIG.trailFadeAlpha})`;
+        drawCtx.fillRect(0, 0, drawCanvas.width, drawCanvas.height);
+        drawCtx.restore();
+    }, CONFIG.trailInterval);
+}
+
+function stopTrailMode() {
+    if (trailIntervalId) { clearInterval(trailIntervalId); trailIntervalId = null; }
+}
+
+// ==================== OVERLAY RENDERING ====================
+function drawHandOverlay(landmarks) {
+    const w = overlayCanvas.width;
+    const h = overlayCanvas.height;
+
+    // Koneksi antar landmark (hand skeleton)
+    const connections = [
+        [0,1],[1,2],[2,3],[3,4],
+        [0,5],[5,6],[6,7],[7,8],
+        [0,9],[9,10],[10,11],[11,12],
+        [0,13],[13,14],[14,15],[15,16],
+        [0,17],[17,18],[18,19],[19,20],
+        [5,9],[9,13],[13,17]
+    ];
+
+    overlayCtx.save();
+    overlayCtx.globalAlpha = 0.35;
+
+    // Gambar koneksi
+    overlayCtx.strokeStyle = 'rgba(0, 240, 255, 0.5)';
+    overlayCtx.lineWidth = 1.5;
+    overlayCtx.shadowColor = '#00F0FF';
+    overlayCtx.shadowBlur = 6;
+    for (const [a, b] of connections) {
+        const ax = (1 - landmarks[a].x) * w;
+        const ay = landmarks[a].y * h;
+        const bx = (1 - landmarks[b].x) * w;
+        const by = landmarks[b].y * h;
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(ax, ay);
+        overlayCtx.lineTo(bx, by);
+        overlayCtx.stroke();
+    }
+
+    // Gambar landmark points
+    for (let i = 0; i < 21; i++) {
+        const x = (1 - landmarks[i].x) * w;
+        const y = landmarks[i].y * h;
+        const r = (i === 4 || i === 8) ? 5 : 3;
+        overlayCtx.beginPath();
+        overlayCtx.arc(x, y, r, 0, Math.PI * 2);
+        overlayCtx.fillStyle = (i === 8) ? '#00FF88' : (i === 4) ? '#FF0055' : '#00F0FF';
+        overlayCtx.shadowColor = overlayCtx.fillStyle;
+        overlayCtx.shadowBlur = 8;
+        overlayCtx.fill();
+    }
+
+    overlayCtx.restore();
+}
+
+function drawCursorGlow(x, y, color, active) {
+    overlayCtx.save();
+    overlayCtx.globalCompositeOperation = 'lighter';
+
+    const baseSize = active ? 20 : 14;
+    const alpha = active ? 0.4 : 0.15;
+
+    // Outer glow
+    const grad = overlayCtx.createRadialGradient(x, y, 0, x, y, baseSize);
+    grad.addColorStop(0, color);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    overlayCtx.globalAlpha = alpha;
+    overlayCtx.fillStyle = grad;
+    overlayCtx.beginPath();
+    overlayCtx.arc(x, y, baseSize, 0, Math.PI * 2);
+    overlayCtx.fill();
+
+    // Core dot
+    overlayCtx.globalAlpha = active ? 0.9 : 0.4;
+    overlayCtx.fillStyle = '#ffffff';
+    overlayCtx.shadowColor = color;
+    overlayCtx.shadowBlur = 12;
+    overlayCtx.beginPath();
+    overlayCtx.arc(x, y, active ? 3 : 2, 0, Math.PI * 2);
+    overlayCtx.fill();
+
+    // Crosshair
+    overlayCtx.globalAlpha = 0.2;
+    overlayCtx.strokeStyle = color;
+    overlayCtx.lineWidth = 1;
+    overlayCtx.shadowBlur = 0;
+    const ch = active ? 12 : 8;
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(x - ch, y); overlayCtx.lineTo(x + ch, y);
+    overlayCtx.moveTo(x, y - ch); overlayCtx.lineTo(x, y + ch);
+    overlayCtx.stroke();
+
+    overlayCtx.restore();
+}
+
+// ==================== MAIN HANDLER: MediaPipe Results ====================
+let lastGestureForSound = '';
+
+function onResults(results) {
+    // Update FPS
+    frameCount++;
+    const now = performance.now();
+    if (now - lastFpsTime >= 1000) {
+        currentFps = frameCount;
+        frameCount = 0;
+        lastFpsTime = now;
+        fpsDisplay.textContent = currentFps;
+    }
+
+    // Clear overlay
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+    if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+        // Tidak ada tangan terdeteksi
+        prevDrawPoint = null;
+        smoothedPoint = null;
+        isDragging = false;
+        updateGestureUI('unknown');
+        updateAndDrawParticles(overlayCtx);
+        return;
+    }
+
+    const landmarks = results.multiHandLandmarks[0];
+    const gestureResult = detectGesture(landmarks);
+    const { gesture, point } = gestureResult;
+
+    // Update gesture UI
+    updateGestureUI(gesture);
+
+    // Gambar hand skeleton di overlay
+    drawHandOverlay(landmarks);
+
+    const W = drawCanvas.width;
+    const H = drawCanvas.height;
+    const now2 = Date.now();
+
+    // ===== GESTURE HANDLING =====
+
+    // ONE-SHOT: Clear canvas
+    if (gesture === 'open_palm' && now2 - lastClearTime > CONFIG.gestureDebounce.clear) {
+        clearDrawCanvas();
+        lastClearTime = now2;
+        playSound('clear');
+        showToast('Canvas cleared', 'fa-eraser');
+        prevDrawPoint = null;
+        smoothedPoint = null;
+        isDragging = false;
+    }
+
+    // ONE-SHOT: Toggle pause
+    if (gesture === 'fist' && now2 - lastPauseTime > CONFIG.gestureDebounce.pause) {
+        isPaused = !isPaused;
+        lastPauseTime = now2;
+        playSound('pause');
+        showToast(isPaused ? 'Drawing paused' : 'Drawing resumed', isPaused ? 'fa-pause' : 'fa-play');
+        prevDrawPoint = null;
+    }
+
+    // ONE-SHOT: Cycle color
+    if (gesture === 'peace' && now2 - lastColorTime > CONFIG.gestureDebounce.color) {
+        cycleColor();
+        playSound('color');
+        lastColorTime = now2;
+        prevDrawPoint = null;
+    }
+
+    // CONTINUOUS: Draw
+    if (gesture === 'draw' && !isPaused && point) {
+        const rawPoint = {
+            x: (1 - point.x) * W,
+            y: point.y * H
+        };
+        smoothedPoint = smoothPoint(rawPoint, smoothedPoint, CONFIG.smoothFactor);
+        const color = getCurrentColor();
+
+        if (prevDrawPoint) {
+            const points = interpolatePoints(prevDrawPoint, smoothedPoint, CONFIG.interpolateSpacing);
+            let from = prevDrawPoint;
+            for (const to of points) {
+                drawNeonSegment(drawCtx, from.x, from.y, to.x, to.y, color, brushSize);
+                // Symmetry mode
+                if (symmetryMode) {
+                    drawNeonSegment(drawCtx, W - from.x, from.y, W - to.x, to.y, color, brushSize);
+                }
+                from = to;
+            }
+            prevDrawPoint = from;
+        } else {
+            prevDrawPoint = { ...smoothedPoint };
+        }
+
+        // Spawn partikel di posisi kursor
+        spawnParticles(smoothedPoint.x, smoothedPoint.y, color, 2);
+
+        // Cursor glow (aktif)
+        drawCursorGlow(smoothedPoint.x, smoothedPoint.y, color, true);
+        isDragging = false;
+    }
+    // CONTINUOUS: Pinch/Drag
+    else if (gesture === 'pinch' && point) {
+        const rawPoint = {
+            x: (1 - point.x) * W,
+            y: point.y * H
+        };
+        if (!isDragging) {
+            isDragging = true;
+            dragStart = rawPoint;
+            if (lastGestureForSound !== 'pinch') playSound('pinch');
+        } else if (dragStart) {
+            const dx = rawPoint.x - dragStart.x;
+            const dy = rawPoint.y - dragStart.y;
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
+                panCanvasContent(dx, dy);
+                dragStart = rawPoint;
+            }
+        }
+        prevDrawPoint = null;
+        // Cursor glow di pinch point
+        drawCursorGlow(rawPoint.x, rawPoint.y, '#FF6B00', true);
+    }
+    else {
+        prevDrawPoint = null;
+        isDragging = false;
+        // Idle cursor di index finger tip
+        if (landmarks[8]) {
+            const ix = (1 - landmarks[8].x) * W;
+            const iy = landmarks[8].y * H;
+            drawCursorGlow(ix, iy, 'rgba(0,240,255,0.5)', false);
+        }
+    }
+
+    lastGestureForSound = gesture;
+
+    // Update & draw partikel
+    updateAndDrawParticles(overlayCtx);
+}
+
+function updateGestureUI(gesture) {
+    const meta = GESTURE_META[gesture] || GESTURE_META.unknown;
+    gestIcon.textContent = meta.icon;
+    gestName.textContent = isPaused && gesture !== 'fist' ? 'PAUSED' : meta.name;
+    gestureDisplay.textContent = meta.name;
+}
+
+// ==================== MEDIAPIPE INITIALIZATION ====================
+async function initMediaPipe() {
+    loaderText.textContent = 'Loading hand tracking model...';
+    loaderFill.style.width = '20%';
+
+    try {
+        handsInstance = new Hands({
+            locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+        });
+
+        handsInstance.setOptions({
+            maxNumHands: 1,
+            modelComplexity: 1,
+            minDetectionConfidence: 0.7,
+            minTrackingConfidence: 0.6
+        });
+
+        handsInstance.onResults(onResults);
+
+        loaderText.textContent = 'Accessing camera...';
+        loaderFill.style.width = '50%';
+
+        // Akses kamera
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+        });
+        camVideo.srcObject = stream;
+        previewVideo.srcObject = stream;
+        await camVideo.play();
+        await previewVideo.play();
+
+        loaderText.textContent = 'Starting hand tracking...';
+        loaderFill.style.width = '75%';
+
+        // Mulai camera loop
+        cameraInstance = new Camera(camVideo, {
+            onFrame: async () => {
+                await handsInstance.send({ image: camVideo });
+            },
+            width: 1280,
+            height: 720
+        });
+        await cameraInstance.start();
+
+        loaderText.textContent = 'Ready!';
+        loaderFill.style.width = '100%';
+
+        // Tunggu sebentar lalu tampilkan app
+        await new Promise(r => setTimeout(r, 600));
+        transitionToApp();
+
+    } catch (err) {
+        console.error('Init error:', err);
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+            showError('Camera access denied. Please allow camera permissions and reload the page.');
+        } else if (err.name === 'NotFoundError') {
+            showError('No camera found. Please connect a camera and reload.');
+        } else {
+            showError(`Failed to initialize: ${err.message}. Please check your browser compatibility and reload.`);
+        }
+    }
+}
+
+// ==================== SPLASH -> APP TRANSITION ====================
+function transitionToApp() {
+    gsap.to(splashEl, {
+        opacity: 0, scale: 1.05,
+        duration: 0.6, ease: 'power2.inOut',
+        onComplete: () => {
+            splashEl.style.display = 'none';
+            appEl.style.display = 'block';
+            gsap.from('#status-bar', { y: -50, opacity: 0, duration: 0.5, ease: 'power3.out' });
+            gsap.from('#ctrl-panel', { x: -80, opacity: 0, duration: 0.6, delay: 0.1, ease: 'power3.out' });
+            gsap.from('#gesture-indicator', { y: 40, opacity: 0, duration: 0.5, delay: 0.2, ease: 'power3.out' });
+            gsap.from('#cam-preview', { scale: 0.8, opacity: 0, duration: 0.5, delay: 0.3, ease: 'back.out(1.5)' });
+        }
+    });
+}
+
+// ==================== SPLASH ANIMATION ====================
+function animateSplash() {
+    // Buat huruf-huruf logo
+    const mainText = 'ZYECHS';
+    const subText = 'AIRDRAW PRO';
+    const logoMain = document.getElementById('logo-main');
+    const logoSub = document.getElementById('logo-sub');
+
+    mainText.split('').forEach(ch => {
+        const span = document.createElement('span');
+        span.className = 'letter';
+        span.textContent = ch;
+        logoMain.appendChild(span);
+    });
+    subText.split('').forEach(ch => {
+        const span = document.createElement('span');
+        span.className = 'letter';
+        span.textContent = ch === ' ' ? '\u00A0' : ch;
+        logoSub.appendChild(span);
+    });
+
+    const tl = gsap.timeline();
+
+    tl.from('#logo-main .letter', {
+        y: 60, opacity: 0, rotateX: -90,
+        stagger: 0.06, duration: 0.7,
+        ease: 'back.out(1.7)'
+    })
+    .from('#logo-sub .letter', {
+        y: 30, opacity: 0,
+        stagger: 0.025, duration: 0.4,
+        ease: 'power2.out'
+    }, '-=0.25')
+    .from('#splash-tagline', {
+        opacity: 0, y: 15, duration: 0.5
+    }, '-=0.1')
+    .from('.loader-wrap', {
+        scaleX: 0, opacity: 0, duration: 0.4, ease: 'power2.out'
+    }, '-=0.2')
+    .from('#loader-text', {
+        opacity: 0, duration: 0.3
+    }, '-=0.1');
+
+    // Mulai init setelah animasi splash selesai
+    tl.then(() => initMediaPipe());
+}
+
+// ==================== SAVE / SCREENSHOT ====================
+function captureScreenshot() {
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = drawCanvas.width;
+    tempCanvas.height = drawCanvas.height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    // Background gelap
+    tempCtx.fillStyle = '#08080F';
+    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+    // Gambar konten
+    tempCtx.drawImage(drawCanvas, 0, 0);
+
+    return tempCanvas.toDataURL('image/png');
+}
+
+function showScreenshotPreview() {
+    const dataUrl = captureScreenshot();
+    screenshotImg.src = dataUrl;
+    screenshotModal.classList.add('show');
+    gsap.from(screenshotModal, { opacity: 0, duration: 0.3 });
+    gsap.from(screenshotImg, { scale: 0.9, duration: 0.4, ease: 'back.out(1.4)' });
+}
+
+function downloadScreenshot() {
+    const dataUrl = captureScreenshot();
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `zyechs-airdraw-${Date.now()}.png`;
+    a.click();
+    closeScreenshotModal();
+    showToast('Image saved!', 'fa-check');
+}
+
+function closeScreenshotModal() {
+    gsap.to(screenshotModal, {
+        opacity: 0, duration: 0.2,
+        onComplete: () => screenshotModal.classList.remove('show')
+    });
+}
+
+// ==================== RECORDING ====================
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+function startRecording() {
+    // Pastikan ada isi di canvas (tambahkan bg)
+    const recordCanvas = document.createElement('canvas');
+    recordCanvas.width = drawCanvas.width;
+    recordCanvas.height = drawCanvas.height;
+    const recordCtx = recordCanvas.getContext('2d');
+
+    // Frame composer interval
+    const stream = recordCanvas.captureStream(30);
+
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = 'video/webm';
+        }
+    }
+
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream, { mimeType });
+    mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+    mediaRecorder.onstop = () => {
+        clearInterval(recordFrameId);
         const blob = new Blob(recordedChunks, { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'zyechs-airdraw-' + Date.now() + '.webm';
-        a.click(); URL.revokeObjectURL(url);
-        showGestureBadge('Video Downloaded');
-      };
-      mediaRecorder.start();
-      state.isRecording = true;
-      recIndicator.style.display = 'flex';
-      $('btnRecord').classList.add('active');
-      sound.gesture();
-      showGestureBadge('Recording...');
-    } catch (e) {
-      showError('Recording not supported in this browser');
-    }
-  }
+        a.href = url;
+        a.download = `zyechs-airdraw-${Date.now()}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Video saved!', 'fa-check');
+    };
+
+    // Compose frames: bg + drawing
+    const recordFrameId = setInterval(() => {
+        recordCtx.fillStyle = '#08080F';
+        recordCtx.fillRect(0, 0, recordCanvas.width, recordCanvas.height);
+        recordCtx.drawImage(drawCanvas, 0, 0);
+    }, 33);
+
+    // Simpan interval ID agar bisa di-clear
+    mediaRecorder._frameInterval = recordFrameId;
+
+    mediaRecorder.start();
+    isRecording = true;
+    recDot.classList.add('active');
+    recLabel.style.display = 'inline';
+    document.getElementById('btn-record').classList.add('active');
+    showToast('Recording started', 'fa-circle');
 }
 
-// ==========================================
-// MEDIAPIPE SETUP
-// ==========================================
-let handsModel = null;
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        clearInterval(mediaRecorder._frameInterval);
+        mediaRecorder.stop();
+    }
+    isRecording = false;
+    recDot.classList.remove('active');
+    recLabel.style.display = 'none';
+    document.getElementById('btn-record').classList.remove('active');
+}
 
-async function initMediaPipe() {
-  loaderText.textContent = 'Loading hand tracking model...';
-  splashFill.style.width = '40%';
-
-  handsModel = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-  });
-
-  handsModel.setOptions({
-    maxNumHands: CFG.maxHands,
-    modelComplexity: CFG.modelComplexity,
-    minDetectionConfidence: CFG.minDetection,
-    minTrackingConfidence: CFG.minTracking
-  });
-
-  handsModel.onResults(results => {
-    state.latestResults = results;
-  });
-
-  loaderText.textContent = 'Starting camera...';
-  splashFill.style.width = '70%';
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user' }
+// ==================== UI EVENT BINDINGS ====================
+function initUI() {
+    // Brush size
+    document.getElementById('btn-size-up').addEventListener('click', () => {
+        brushSize = Math.min(CONFIG.brushMax, brushSize + 2);
+        brushSizeDisplay.textContent = brushSize + 'px';
     });
-    video.srcObject = stream;
-    await video.play();
+    document.getElementById('btn-size-down').addEventListener('click', () => {
+        brushSize = Math.max(CONFIG.brushMin, brushSize - 2);
+        brushSizeDisplay.textContent = brushSize + 'px';
+    });
 
-    splashFill.style.width = '90%';
-    loaderText.textContent = 'Calibrating...';
+    // Color swatches
+    document.querySelectorAll('.color-swatch').forEach((el, i) => {
+        el.addEventListener('click', () => {
+            currentColorIndex = i;
+            updateColorSwatchUI();
+        });
+    });
 
-    // Mulai loop kirim frame ke MediaPipe
-    async function sendFrame() {
-      if (video.readyState >= 2) {
-        await handsModel.send({ image: video });
-      }
-      requestAnimationFrame(sendFrame);
-    }
-    sendFrame();
+    // Symmetry toggle
+    document.getElementById('btn-symmetry').addEventListener('click', () => {
+        symmetryMode = !symmetryMode;
+        document.getElementById('btn-symmetry').classList.toggle('active', symmetryMode);
+        showToast(symmetryMode ? 'Symmetry ON' : 'Symmetry OFF', 'fa-arrows-left-right');
+    });
 
-    // Tunggu sebentar untuk kalibrasi
-    await new Promise(r => setTimeout(r, 1500));
-    splashFill.style.width = '100%';
-    await new Promise(r => setTimeout(r, 400));
+    // Trail toggle
+    document.getElementById('btn-trail').addEventListener('click', () => {
+        trailMode = !trailMode;
+        document.getElementById('btn-trail').classList.toggle('active', trailMode);
+        if (trailMode) { startTrailMode(); } else { stopTrailMode(); }
+        showToast(trailMode ? 'Trail ON' : 'Trail OFF', 'fa-wind');
+    });
 
-    // Sembunyikan splash & loader, tampilkan app
-    splash.style.display = 'none';
-    loader.style.display = 'none';
-    controls.classList.add('show');
+    // Save
+    document.getElementById('btn-save').addEventListener('click', () => {
+        ensureAudio();
+        showScreenshotPreview();
+    });
+    document.getElementById('btn-download').addEventListener('click', downloadScreenshot);
+    document.getElementById('btn-cancel-save').addEventListener('click', closeScreenshotModal);
 
-    // Inisialisasi audio context (perlu user interaction, tapi kita trigger lewat gesture)
-    sound.init();
+    // Record
+    document.getElementById('btn-record').addEventListener('click', () => {
+        ensureAudio();
+        toggleRecording();
+    });
 
-    // Auto-show tutorial di pertama kali
-    if (!localStorage.getItem('zyechs_tutorial_seen')) {
-      setTimeout(() => {
-        tutorial.style.display = 'flex';
-        localStorage.setItem('zyechs_tutorial_seen', '1');
-      }, 800);
-    }
+    // Clear
+    document.getElementById('btn-clear').addEventListener('click', () => {
+        ensureAudio();
+        clearDrawCanvas();
+        playSound('clear');
+        showToast('Canvas cleared', 'fa-eraser');
+    });
 
-  } catch (err) {
-    loader.style.display = 'none';
-    splash.style.display = 'none';
-    if (err.name === 'NotAllowedError') {
-      showError('Camera access denied. Please allow camera permission and reload.');
-    } else if (err.name === 'NotFoundError') {
-      showError('No camera found. Please connect a camera and reload.');
-    } else {
-      showError('Failed to start: ' + err.message);
-    }
-  }
+    // Sound toggle
+    document.getElementById('btn-sound').addEventListener('click', () => {
+        ensureAudio();
+        soundEnabled = !soundEnabled;
+        const icon = document.querySelector('#btn-sound i');
+        icon.className = soundEnabled ? 'fas fa-volume-high' : 'fas fa-volume-xmark';
+        document.getElementById('btn-sound').classList.toggle('active', !soundEnabled);
+        showToast(soundEnabled ? 'Sound ON' : 'Sound OFF', 'fa-volume-high');
+    });
+
+    // Theme toggle
+    document.getElementById('btn-theme').addEventListener('click', () => {
+        isDarkTheme = !isDarkTheme;
+        document.documentElement.setAttribute('data-theme', isDarkTheme ? 'dark' : 'light');
+        const icon = document.querySelector('#btn-theme i');
+        icon.className = isDarkTheme ? 'fas fa-moon' : 'fas fa-sun';
+        showToast(isDarkTheme ? 'Dark mode' : 'Light mode', 'fa-circle-half-stroke');
+    });
+
+    // Tutorial
+    document.getElementById('btn-tutorial').addEventListener('click', () => {
+        tutorialEl.classList.add('show');
+        gsap.from('.tutorial-card', { scale: 0.9, opacity: 0, duration: 0.4, ease: 'back.out(1.3)' });
+    });
+    document.getElementById('tutorial-close').addEventListener('click', () => {
+        gsap.to(tutorialEl, {
+            opacity: 0, duration: 0.25,
+            onComplete: () => { tutorialEl.classList.remove('show'); tutorialEl.style.opacity = ''; }
+        });
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+        switch(e.key.toLowerCase()) {
+            case 's':
+                e.preventDefault();
+                ensureAudio();
+                showScreenshotPreview();
+                break;
+            case 'r':
+                e.preventDefault();
+                ensureAudio();
+                toggleRecording();
+                break;
+            case 'c':
+                e.preventDefault();
+                ensureAudio();
+                clearDrawCanvas();
+                playSound('clear');
+                showToast('Canvas cleared', 'fa-eraser');
+                break;
+            case 't':
+                e.preventDefault();
+                trailMode = !trailMode;
+                document.getElementById('btn-trail').classList.toggle('active', trailMode);
+                if (trailMode) startTrailMode(); else stopTrailMode();
+                showToast(trailMode ? 'Trail ON' : 'Trail OFF', 'fa-wind');
+                break;
+            case 'm':
+                e.preventDefault();
+                symmetryMode = !symmetryMode;
+                document.getElementById('btn-symmetry').classList.toggle('active', symmetryMode);
+                showToast(symmetryMode ? 'Symmetry ON' : 'Symmetry OFF', 'fa-arrows-left-right');
+                break;
+            case 'escape':
+                if (tutorialEl.classList.contains('show')) {
+                    tutorialEl.classList.remove('show');
+                }
+                if (screenshotModal.classList.contains('show')) {
+                    closeScreenshotModal();
+                }
+                break;
+        }
+    });
+
+    // Klik di luar modal untuk tutup
+    screenshotModal.addEventListener('click', (e) => {
+        if (e.target === screenshotModal) closeScreenshotModal();
+    });
+    tutorialEl.addEventListener('click', (e) => {
+        if (e.target === tutorialEl) {
+            tutorialEl.classList.remove('show');
+        }
+    });
+
+    // Inisialisasi audio context pada first interaction
+    document.addEventListener('click', ensureAudio, { once: true });
+    document.addEventListener('touchstart', ensureAudio, { once: true });
 }
 
-// ==========================================
-// EVENT LISTENERS
-// ==========================================
- $('btnBrush').addEventListener('click', () => {
-  const visible = brushPopup.style.display === 'flex';
-  brushPopup.style.display = visible ? 'none' : 'flex';
-  if (!visible) sound.gesture();
+// ==================== START ====================
+document.addEventListener('DOMContentLoaded', () => {
+    initUI();
+    animateSplash();
 });
-brushSlider.addEventListener('input', e => {
-  state.brushSize = parseInt(e.target.value);
-  brushVal.textContent = state.brushSize;
-});
-
- $('btnRainbow').addEventListener('click', () => {
-  state.rainbowMode = !state.rainbowMode;
-  $('btnRainbow').classList.toggle('active', state.rainbowMode);
-  sound.gesture();
-  showGestureBadge(state.rainbowMode ? 'Rainbow On' : 'Rainbow Off');
-});
-
- $('btnSymmetry').addEventListener('click', () => {
-  state.symmetryMode = !state.symmetryMode;
-  $('btnSymmetry').classList.toggle('active', state.symmetryMode);
-  sound.gesture();
-  showGestureBadge(state.symmetryMode ? 'Mirror On' : 'Mirror Off');
-});
-
- $('btnTrail').addEventListener('click', () => {
-  state.trailMode = !state.trailMode;
-  $('btnTrail').classList.toggle('active', state.trailMode);
-  sound.gesture();
-  showGestureBadge(state.trailMode ? 'Trail On' : 'Trail Off');
-});
-
- $('btnCamToggle').addEventListener('click', () => {
-  state.showCamera = !state.showCamera;
-  $('btnCamToggle').classList.toggle('active', state.showCamera);
-  sound.gesture();
-});
-
- $('btnSave').addEventListener('click', () => { sound.init(); triggerSave(); });
- $('btnClear').addEventListener('click', () => { clearDrawing(); sound.clear(); showGestureBadge('Canvas Cleared'); });
- $('btnRecord').addEventListener('click', () => { sound.init(); toggleRecording(); });
-
- $('btnTheme').addEventListener('click', () => { toggleTheme(); sound.gesture(); });
- $('btnTutorial').addEventListener('click', () => { tutorial.style.display = tutorial.style.display === 'flex' ? 'none' : 'flex'; });
- $('tutClose').addEventListener('click', () => { tutorial.style.display = 'none'; });
-tutorial.addEventListener('click', e => { if (e.target === tutorial) tutorial.style.display = 'none'; });
-
- $('previewClose').addEventListener('click', () => { previewModal.style.display = 'none'; });
- $('previewDownload').addEventListener('click', () => {
-  const blob = previewModal._blob;
-  if (blob) {
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'zyechs-airdraw-' + Date.now() + '.png';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-  previewModal.style.display = 'none';
-  showGestureBadge('Image Saved');
-});
-previewModal.addEventListener('click', e => { if (e.target === previewModal) previewModal.style.display = 'none'; });
-
-// Keyboard shortcuts
-document.addEventListener('keydown', e => {
-  if (e.key === 'c' || e.key === 'C') { clearDrawing(); sound.clear(); }
-  if (e.key === 's' || e.key === 'S') { e.preventDefault(); sound.init(); triggerSave(); }
-  if (e.key === 'r' || e.key === 'R') { sound.init(); toggleRecording(); }
-  if (e.key === 'm' || e.key === 'M') { state.symmetryMode = !state.symmetryMode; $('btnSymmetry').classList.toggle('active', state.symmetryMode); }
-  if (e.key === 't' || e.key === 'T') { state.trailMode = !state.trailMode; $('btnTrail').classList.toggle('active', state.trailMode); }
-  if (e.key === 'h' || e.key === 'H') { tutorial.style.display = tutorial.style.display === 'flex' ? 'none' : 'flex'; }
-  if (e.key === 'Escape') { tutorial.style.display = 'none'; previewModal.style.display = 'none'; brushPopup.style.display = 'none'; }
-});
-
-// ==========================================
-// LANDSCAPE CHECK (Mobile)
-// ==========================================
-function checkOrientation() {
-  const isMobile = /Mobi|Android/i.test(navigator.userAgent);
-  if (isMobile && window.innerHeight > window.innerWidth) {
-    landscapeWarn.style.display = 'flex';
-  } else {
-    landscapeWarn.style.display = 'none';
-  }
-}
-window.addEventListener('resize', checkOrientation);
-window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 200));
-
-// ==========================================
-// SPLASH SCREEN ANIMATION (GSAP)
-// ==========================================
-async function runSplash() {
-  await new Promise(r => setTimeout(r, 300));
-
-  // Animasi logo
-  gsap.to('.splash-logo', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' });
-  gsap.fromTo('.splash-logo', { y: 30 }, { y: 0, duration: 0.8, ease: 'power3.out' });
-
-  await new Promise(r => setTimeout(r, 400));
-
-  gsap.to('.splash-sub', { opacity: 1, duration: 0.6, ease: 'power2.out' });
-  gsap.fromTo('.splash-sub', { letterSpacing: '0.8em' }, { letterSpacing: '0.3em', duration: 1.2, ease: 'power2.out' });
-
-  await new Promise(r => setTimeout(r, 300));
-
-  gsap.to('.splash-tag', { opacity: 1, duration: 0.5, ease: 'power2.out' });
-  gsap.to('.splash-bar', { opacity: 1, duration: 0.4, ease: 'power2.out' });
-
-  // Animasi loading bar
-  gsap.to('#splashFill', { width: '20%', duration: 0.6, ease: 'power1.inOut' });
-
-  await new Promise(r => setTimeout(r, 700));
-  // Lanjut ke init MediaPipe (loading bar dikelola di sana)
-}
-
-// ==========================================
-// INISIALISASI APLIKASI
-// ==========================================
-async function init() {
-  resizeCanvases();
-  checkOrientation();
-
-  // Mulai render loop dulu (kosong)
-  fpsUpdateTime = performance.now();
-  requestAnimationFrame(render);
-
-  // Jalankan splash screen
-  await runSplash();
-
-  // Tampilkan loader, sembunyikan splash
-  loader.style.display = 'flex';
-
-  // Init MediaPipe + kamera
-  await initMediaPipe();
-}
-
-// Mulai!
-init();
 </script>
 </body>
 </html>
